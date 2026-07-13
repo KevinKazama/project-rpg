@@ -2,18 +2,24 @@ import { Character, Combatant, Move } from './Character';
 import { Monster } from './Monster';
 import { getRandomMonster } from './Bestiary';
 import { getRandomEquipmentLoot } from './Stuff';
+import { StoryManager } from './StoryManager';
 
 export class CombatEngine {
   player: Character;
   enemy: Monster;
   onLogCallback: (message: string) => void;
   onUpdateUICallback: () => void;
+  private storyManager: StoryManager | null = null;
 
   constructor(player: Character, enemy: Monster, onLog: (msg: string) => void, onUpdateUI: () => void) {
     this.player = player;
     this.enemy = enemy;
     this.onLogCallback = onLog;
     this.onUpdateUICallback = onUpdateUI;
+  }
+
+  setStoryManager(storyManager: StoryManager) {
+    this.storyManager = storyManager;
   }
 
   // Déclenche un round complet après le choix du joueur
@@ -73,6 +79,11 @@ export class CombatEngine {
   private checkBattleStatus() {
     if (!this.player.isAlive()) {
       this.onLogCallback(`❌ **K.O.** ! ${this.player.name} a perdu le combat...`);
+      
+      // Si on est en mode histoire, notifier le StoryManager
+      if (this.storyManager) {
+        this.storyManager.onCombatDefeat();
+      }
     } else if (!this.enemy.isAlive()) {
       this.onLogCallback(`🏆 **VICTOIRE** ! ${this.enemy.name} a mordu la poussière !`);
      
@@ -123,6 +134,11 @@ export class CombatEngine {
       // On sauvegarde aussi les stats de base qui ont pu changer via les bonus précédents
       localStorage.setItem('rpg_player_base_hp', this.player.baseMaxHp.toString());
       localStorage.setItem('rpg_player_base_atk', this.player.baseAttack.toString());
+      
+      // Si on est en mode histoire, notifier le StoryManager
+      if (this.storyManager) {
+        this.storyManager.onCombatVictory();
+      }
     }
   }
 

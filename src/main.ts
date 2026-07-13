@@ -3,6 +3,7 @@ import { Monster } from './Monster';
 import { CombatEngine } from './CombatEngine';
 import { UIManager } from './UIManager';
 import { Weapon, Armor, Equipment } from './Stuff';
+import { StoryManager } from './StoryManager';
 
 // 1. Définition des attaques/soins disponibles
 const defaultPlayerMoves: Move[] = [
@@ -88,6 +89,18 @@ const enemy = new Monster('Brute Ennemie', 120, 8, 1, 10, enemyMoves);
 // 3. Initialisation des gestionnaires
 const ui = new UIManager();
 
+const storyManager = new StoryManager(
+  hero,
+  (scenario) => ui.showScenario(scenario),
+  (msg) => ui.addLog(msg),
+  (enemy) => {
+    // Démarrer un combat avec l'ennemi du scénario
+    engine.enemy = enemy;
+    ui.hideScenario();
+    ui.updateUI();
+  }
+);
+
 const engine = new CombatEngine(
   hero,
   enemy,
@@ -95,7 +108,10 @@ const engine = new CombatEngine(
   () => ui.updateUI()         // Lien pour rafraîchir les barres de vie
 );
 
+// Connecter le StoryManager au CombatEngine
+engine.setStoryManager(storyManager);
+
 // 4. Lancement du jeu
 ui.init(engine, (selectedMove) => {
   engine.executeRound(selectedMove);
-});
+}, storyManager);

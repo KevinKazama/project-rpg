@@ -220,4 +220,22 @@ export class Character implements Combatant {
     return false; // Impossible si sac vide ou PV déjà max
   }
 
+  // Réinitialisation complète pour le permadeath
+  resetCharacter() {
+    this.level = 1;
+    this.xp = 0;
+    this.baseMaxHp = 100;
+    this.baseAttack = 10;
+    this.baseDefense = 5;
+    this.hp = this.maxHp;
+    this.inventory.potions = 2;
+    this.inventory.items = [];
+    this.equippedWeapon = null;
+    this.equippedArmor = null;
+    this.moves = [
+      { name: '👊 Charge', damage: 15, type: 'attack', accuracy: 95 },
+      { name: '🩹 Potion de Soin', damage: 30, type: 'heal', accuracy: 100 }
+    ];
+  }
+
 }

@@ -56,3 +56,25 @@ export function getRandomMonster(playerLevel: number): Monster {
     playerLevel // Le monstre s'adapte direct au niveau du joueur !
   );
 }
+
+// 4. Fonction pour générer un monstre spécifique par type
+export function getMonsterByType(enemyType: 'goblin' | 'orc' | 'ghost' | 'dragon', playerLevel: number): Monster {
+  const typeIndex: Record<string, number> = {
+    'goblin': 0,
+    'orc': 1,
+    'ghost': 2,
+    'dragon': 3
+  };
+
+  const template = templates[typeIndex[enemyType]];
+
+  return new Monster(
+    template.name,
+    template.hp,
+    template.attack,
+    template.defense || 5,
+    template.speed,
+    template.moves,
+    playerLevel
+  );
+}

@@ -2,16 +2,25 @@ import { CombatEngine } from './CombatEngine';
 import { Move } from './Character';
 import { getSkillForLevel } from './Skills';
 import { Weapon } from './Stuff';
+import { Scenario, Choice } from './Scenario';
+import { StoryManager } from './StoryManager';
 
 export class UIManager {
   private engine!: CombatEngine;
+  private storyManager!: StoryManager;
+  private currentScenario: Scenario | null = null;
+  private isStoryMode: boolean = false;
 
-  init(engine: CombatEngine, onActionSelected: (move: Move) => void) {
+  init(engine: CombatEngine, onActionSelected: (move: Move) => void, storyManager: StoryManager) {
     this.engine = engine;
+    this.storyManager = storyManager;
     this.setupHTMLStructure();
     this.renderButtons(onActionSelected);
     this.setupBonusEvents();
     this.updateUI();
+    
+    // Initialiser le premier scénario
+    this.showScenario(storyManager.getCurrentScenario());
   }
 
   private setupHTMLStructure() {
@@ -220,7 +229,7 @@ export class UIManager {
     pLevel.textContent = `⭐ Niveau ${this.engine.player.level}`;
     pStatsText.textContent = `ATK: ${baseAtk + weaponBonus} | DEF: ${baseDef + defenseBonus} | PV Max: ${this.engine.player.maxHp}`;
 
-    const pWeaponText = document.getElementById('p-weapon')!;
+    const pWeaponText = document.getElementById('player-weapon')!;
     
     if (pWeaponText) {
       if (this.engine.player.equippedWeapon) {
@@ -395,5 +404,83 @@ export class UIManager {
     if (!journal) return;
     journal.innerHTML += `<br>${message}`;
     journal.scrollTop = journal.scrollHeight;
+  }
+
+  showScenario(scenario: Scenario) {
+    this.currentScenario = scenario;
+    this.isStoryMode = true;
+    
+    const container = document.getElementById('actions-container') as HTMLElement;
+    const invContainer = document.getElementById('inventory-container') as HTMLElement;
+    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
+    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    
+    if (!container) return;
+    
+    // Masquer les éléments de combat
+    container.style.display = 'none';
+    invContainer.style.display = 'none';
+    bonusContainer.style.display = 'none';
+    nextCombatBtn.style.display = 'none';
+    
+    // Afficher le panneau de scénario
+    let scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
+    if (!scenarioPanel) {
+      scenarioPanel = document.createElement('div');
+      scenarioPanel.id = 'scenario-panel';
+      document.getElementById('app')?.appendChild(scenarioPanel);
+    }
+    
+    scenarioPanel.style.display = 'block';
+    
+    // Style spécial pour les scénarios de mort
+    const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
+    
+    if (isDeathScenario) {
+      scenarioPanel.style.cssText = 'background: #FFEBEE; border: 3px solid #D32F2F; padding: 20px; border-radius: 8px; margin-top: 15px; text-align: center;';
+      scenarioPanel.innerHTML = `
+        <h2 style="margin: 0 0 15px 0; color: #D32F2F; font-size: 24px;">💀 ${scenario.title}</h2>
+        <p style="margin: 0 0 20px 0; color: #424242; line-height: 1.6; font-size: 16px;">${scenario.description}</p>
+        <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 10px; align-items: center;"></div>
+      `;
+    } else {
+      scenarioPanel.style.cssText = 'background: #E3F2FD; border: 2px solid #2196F3; padding: 15px; border-radius: 8px; margin-top: 15px;';
+      scenarioPanel.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; color: #1565C0;">📖 ${scenario.title}</h3>
+        <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5;">${scenario.description}</p>
+        <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      `;
+    }
+    
+    const choicesContainer = document.getElementById('scenario-choices')!;
+    scenario.choices.forEach(choice => {
+      const choiceBtn = document.createElement('button');
+      choiceBtn.textContent = choice.text;
+      
+      if (isDeathScenario) {
+        choiceBtn.style.cssText = 'padding: 15px 30px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; min-width: 200px;';
+        choiceBtn.onmouseover = () => choiceBtn.style.background = '#B71C1C';
+        choiceBtn.onmouseout = () => choiceBtn.style.background = '#D32F2F';
+      } else {
+        choiceBtn.style.cssText = 'padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left;';
+        choiceBtn.onmouseover = () => choiceBtn.style.background = '#1976D2';
+        choiceBtn.onmouseout = () => choiceBtn.style.background = '#2196F3';
+      }
+      
+      choiceBtn.onclick = () => {
+        this.storyManager.makeChoice(choice.id);
+      };
+      choicesContainer.appendChild(choiceBtn);
+    });
+    
+    this.addLog(`📖 **${scenario.title}** : ${scenario.description}`);
+  }
+
+  hideScenario() {
+    this.isStoryMode = false;
+    const scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
+    if (scenarioPanel) {
+      scenarioPanel.style.display = 'none';
+    }
   }
 }
