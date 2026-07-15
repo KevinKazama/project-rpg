@@ -24,7 +24,6 @@ const savedBaseHp = localStorage.getItem('rpg_player_base_hp');
 const savedBaseAtk = localStorage.getItem('rpg_player_base_atk');
 const savedBaseDef = localStorage.getItem('rpg_player_base_def');
 const savedMoves = localStorage.getItem('rpg_player_moves'); // NOUVEAU : Charge la liste d'attaques
-const savedPotions = localStorage.getItem('rpg_player_potions');
 const savedWeapon = localStorage.getItem('rpg_player_weapon');
 const savedArmor = localStorage.getItem('rpg_player_armor');
 const savedBag = localStorage.getItem('rpg_player_bag');
@@ -35,7 +34,6 @@ const initialHp = savedBaseHp ? parseInt(savedBaseHp) : 100;   // 100 par défau
 const initialAtk = savedBaseAtk ? parseInt(savedBaseAtk) : 10; // 10 par défaut si 1ère partie
 const initialDef = savedBaseDef ? parseInt(savedBaseDef) : 5;  // 5 par défaut si 1ère partie
 const initialMoves: Move[] = savedMoves ? JSON.parse(savedMoves) : defaultPlayerMoves;
-const initialPotions = savedPotions ? parseInt(savedPotions) : 2;
 
 let initialWeapon: Weapon | null = null;
 if (savedWeapon) {
@@ -76,7 +74,6 @@ const hero = new Character(
     initialDef,
     15, 
     initialMoves,  
-    initialPotions,
     initialWeapon,
     initialArmor,
     initialBag,

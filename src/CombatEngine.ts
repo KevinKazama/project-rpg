@@ -88,9 +88,12 @@ export class CombatEngine {
       this.onLogCallback(`🏆 **VICTOIRE** ! ${this.enemy.name} a mordu la poussière !`);
      
       if (Math.random() < 0.30) {
-        this.player.inventory.potions++;
-        this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
-        localStorage.setItem('rpg_player_potions', this.player.inventory.potions.toString());
+        const newPotion = getRandomEquipmentLoot(this.enemy.level);
+        if (newPotion && newPotion.type === 'potion') {
+          this.player.addItemToInventory(newPotion);
+          this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
+          localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+        }
       }
 
       if (Math.random() < 0.95) {
@@ -143,23 +146,20 @@ export class CombatEngine {
   }
 
   startNewCombat() {
-    // 1. On soigne entièrement le joueur
-    this.player.hp = this.player.maxHp;
-
-    // 2. On recrée ou met à jour l'ennemi au niveau actuel du joueur pour garder du défi
+    // 1. On recrée ou met à jour l'ennemi au niveau actuel du joueur pour garder du défi
     this.enemy = getRandomMonster(this.player.level);
 
-    // 3. On déclenche les rafraîchissements visuels
+    // 2. On déclenche les rafraîchissements visuels
     this.onLogCallback(`--- ⚔️ UN NOUVEL ADVERSAIRE APPROCHE : ${this.enemy.name} (Niv. ${this.enemy.level}) ---`);
     this.onUpdateUICallback();
   }
 
   executePotionTurn() {
     if (this.player.usePotion()) {
-      this.onLogCallback(`🧪 ${this.player.name} boit une Potion et récupère **40 PV** !`);
+      this.onLogCallback(`🧪 ${this.player.name} boit une Potion et récupère des PV !`);
       
-      // Sauvegarde le stock réduit
-      localStorage.setItem('rpg_player_potions', this.player.inventory.potions.toString());
+      // Sauvegarde le sac mis à jour
+      localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
       
       // Riposte directe de l'ennemi (boire une potion consomme le tour !)
       if (this.enemy.isAlive()) {

@@ -1,4 +1,4 @@
-export type EquipmentType = 'weapon' | 'armor';
+export type EquipmentType = 'weapon' | 'armor' | 'potion';
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
 export interface BaseEquipment {
@@ -20,10 +20,15 @@ export interface Armor extends BaseEquipment {
   bonusDef: number;
 }
 
-export type Equipment = Weapon | Armor;
+export interface Potion extends BaseEquipment {
+  type: 'potion';
+  healAmount: number;
+}
+
+export type Equipment = Weapon | Armor | Potion;
 
 // 📖 LE DICTIONNAIRE COMPLET DU JEU
-export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[] } = {
+export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[]; potions: Potion[] } = {
   weapons: [
     // --- NIVEAU 1 ---
     { id: 'w_rust_dagger', name: 'Dague Rouillée', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 3, description: 'Mieux que rien, mais attention au tétanos.' },
@@ -54,6 +59,12 @@ export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[] } = {
     // --- NIVEAU 4 à 5 ---
     { id: 'a_dragon_scale', name: 'Armure en Écailles de Dragon', type: 'armor', rarity: 'epic', levelRequired: 4, bonusDef: 30, description: 'Aussi légère que de la soie, aussi dure que le diamant.' },
     { id: 'a_immortal_plate', name: 'Égide de l\'Immortel', type: 'armor', rarity: 'legendary', levelRequired: 5, bonusDef: 45, description: 'Une armure divine qui repousse le destin lui-même.' }
+  ],
+  potions: [
+    { id: 'p_health_small', name: 'Potion de Soin Mineure', type: 'potion', rarity: 'common', levelRequired: 1, healAmount: 30, description: 'Une petite fiole de liquide rouge. Guérit 30 PV.' },
+    { id: 'p_health_medium', name: 'Potion de Soin', type: 'potion', rarity: 'rare', levelRequired: 2, healAmount: 50, description: 'Un flacon standard de potion de soin. Guérit 50 PV.' },
+    { id: 'p_health_large', name: 'Potion de Soin Majeure', type: 'potion', rarity: 'epic', levelRequired: 4, healAmount: 80, description: 'Une potion puissante distillée par les alchimistes. Guérit 80 PV.' },
+    { id: 'p_health_ultimate', name: 'Élixir de Vie', type: 'potion', rarity: 'legendary', levelRequired: 5, healAmount: 100, description: 'Un élixir légendaire qui restaure la vitalité. Guérit 100 PV.' }
   ]
 };
 
@@ -67,8 +78,13 @@ export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
   else if (randRarity < 97) targetRarity = 'epic';
   else targetRarity = 'legendary';
 
-  // 2. On choisit le type d'objet : 50% Arme, 50% Armure
-  const itemType = Math.random() < 0.5 ? 'weapons' : 'armors';
+  // 2. On choisit le type d'objet : 40% Arme, 40% Armure, 20% Potion
+  const randType = Math.random() * 100;
+  let itemType: 'weapons' | 'armors' | 'potions';
+  
+  if (randType < 40) itemType = 'weapons';
+  else if (randType < 80) itemType = 'armors';
+  else itemType = 'potions';
 
   // 3. On filtre la base de données selon le type, le niveau et la rareté
   let validItems = ITEM_DATABASE[itemType].filter(
@@ -94,5 +110,17 @@ export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
   return {
     ...selectedTemplate,
     id: Math.random().toString(36).substring(2, 11)
+  };
+}
+
+export function createPotion(healAmount: number = 40): Potion {
+  return {
+    id: Math.random().toString(36).substring(2, 11),
+    name: 'Potion de Soin',
+    type: 'potion',
+    rarity: 'common',
+    levelRequired: 1,
+    healAmount: healAmount,
+    description: 'Une potion de soin standard.'
   };
 }

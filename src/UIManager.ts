@@ -124,7 +124,6 @@ export class UIManager {
       localStorage.clear();
       localStorage.setItem('rpg_player_level', '1');
       localStorage.setItem('rpg_player_xp', '0');
-      localStorage.setItem('rpg_player_potions', '2');
       localStorage.setItem('rpg_player_base_hp', '100');
       localStorage.setItem('rpg_player_base_atk', '10');
       localStorage.removeItem('rpg_player_weapon'); // Supprime l'arme
@@ -274,8 +273,10 @@ export class UIManager {
     // Met à jour le compteur de potions
     const potionCountSpan = document.getElementById('potion-count')!;
     const invContainer = document.getElementById('inventory-container')!;
-    potionCountSpan.textContent = this.engine.player.inventory.potions.toString();
-
+    // potionCountSpan.textContent = this.engine.player.inventory.potions.toString();
+    const potionCount = this.engine.player.inventory.items.filter(item => item.type === 'potion').length;
+    potionCountSpan.textContent = potionCount.toString();
+  
 
     // 🔀 LOGIQUE D'AFFICHAGE DES PANNEAUX
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
@@ -421,7 +422,10 @@ export class UIManager {
     container.style.display = 'none';
     invContainer.style.display = 'none';
     bonusContainer.style.display = 'none';
-    nextCombatBtn.style.display = 'none';
+    if (nextCombatBtn) {
+      nextCombatBtn.style.display = 'none';
+      (nextCombatBtn as HTMLButtonElement).disabled = true;
+    }
     
     // Afficher le panneau de scénario
     let scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
@@ -436,6 +440,9 @@ export class UIManager {
     // Style spécial pour les scénarios de mort
     const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
     
+    // Vérifier si le joueur a des potions
+    const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
+    
     if (isDeathScenario) {
       scenarioPanel.style.cssText = 'background: #FFEBEE; border: 3px solid #D32F2F; padding: 20px; border-radius: 8px; margin-top: 15px; text-align: center;';
       scenarioPanel.innerHTML = `
@@ -448,8 +455,32 @@ export class UIManager {
       scenarioPanel.innerHTML = `
         <h3 style="margin: 0 0 10px 0; color: #1565C0;">📖 ${scenario.title}</h3>
         <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5;">${scenario.description}</p>
+        <div id="potion-button-container" style="margin-bottom: 15px;"></div>
         <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 8px;"></div>
       `;
+      
+      // Ajouter le bouton de potion
+      const potionContainer = document.getElementById('potion-button-container')!;
+      const potionBtn = document.createElement('button');
+      potionBtn.textContent = '🧪 Utiliser une Potion';
+      
+      if (!hasPotion) {
+        potionBtn.style.cssText = 'padding: 10px 20px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; opacity: 0.6;';
+      } else {
+        potionBtn.style.cssText = 'padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;';
+        potionBtn.onmouseover = () => potionBtn.style.background = '#388E3C';
+        potionBtn.onmouseout = () => potionBtn.style.background = '#4CAF50';
+        potionBtn.onclick = () => {
+          if (this.storyManager.usePotion()) {
+            this.addLog('🧪 Vous utilisez une potion et récupérez des PV !');
+            this.updateUI();
+            // Rafraîchir le scénario pour mettre à jour l'état du bouton
+            this.showScenario(scenario);
+          }
+        };
+      }
+      
+      potionContainer.appendChild(potionBtn);
     }
     
     const choicesContainer = document.getElementById('scenario-choices')!;
@@ -457,19 +488,28 @@ export class UIManager {
       const choiceBtn = document.createElement('button');
       choiceBtn.textContent = choice.text;
       
+      // Vérifier si le choix est disponible
+      const canMakeChoice = this.storyManager.canMakeChoice(choice);
+      
       if (isDeathScenario) {
         choiceBtn.style.cssText = 'padding: 15px 30px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; min-width: 200px;';
         choiceBtn.onmouseover = () => choiceBtn.style.background = '#B71C1C';
         choiceBtn.onmouseout = () => choiceBtn.style.background = '#D32F2F';
       } else {
-        choiceBtn.style.cssText = 'padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left;';
-        choiceBtn.onmouseover = () => choiceBtn.style.background = '#1976D2';
-        choiceBtn.onmouseout = () => choiceBtn.style.background = '#2196F3';
+        if (!canMakeChoice) {
+          choiceBtn.style.cssText = 'padding: 12px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; text-align: left; opacity: 0.6;';
+        } else {
+          choiceBtn.style.cssText = 'padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left;';
+          choiceBtn.onmouseover = () => choiceBtn.style.background = '#1976D2';
+          choiceBtn.onmouseout = () => choiceBtn.style.background = '#2196F3';
+        }
       }
       
-      choiceBtn.onclick = () => {
-        this.storyManager.makeChoice(choice.id);
-      };
+      if (canMakeChoice) {
+        choiceBtn.onclick = () => {
+          this.storyManager.makeChoice(choice.id);
+        };
+      }
       choicesContainer.appendChild(choiceBtn);
     });
     
@@ -481,6 +521,20 @@ export class UIManager {
     const scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
     if (scenarioPanel) {
       scenarioPanel.style.display = 'none';
+    }
+    
+    // Réactiver les éléments de combat
+    const container = document.getElementById('actions-container') as HTMLElement;
+    const invContainer = document.getElementById('inventory-container') as HTMLElement;
+    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
+    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    
+    container.style.display = 'block';
+    invContainer.style.display = 'block';
+    bonusContainer.style.display = 'block';
+    if (nextCombatBtn) {
+      nextCombatBtn.style.display = 'block';
+      (nextCombatBtn as HTMLButtonElement).disabled = false;
     }
   }
 }

@@ -5,7 +5,7 @@ export interface Choice {
 }
 
 export interface ScenarioConsequence {
-  type: 'combat' | 'reward' | 'damage' | 'heal' | 'story' | 'death';
+  type: 'combat' | 'reward' | 'damage' | 'heal' | 'story' | 'death' | 'offer';
   value?: number;
   nextScenarioId?: string;
   description?: string;
@@ -13,6 +13,8 @@ export interface ScenarioConsequence {
   enemyType?: 'goblin' | 'orc' | 'ghost' | 'dragon';
   xpReward?: number;
   itemReward?: string;
+  requiredItemType?: 'potion' | 'weapon' | 'armor' | 'any';
+  requiredItemRarity?: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
 export interface Scenario {

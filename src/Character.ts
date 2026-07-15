@@ -1,5 +1,5 @@
 
-import { Weapon, Armor, Equipment } from './Stuff';
+import { Weapon, Armor, Equipment, Potion, createPotion } from './Stuff';
 
 export interface Move {
   name: string;
@@ -51,7 +51,6 @@ export class Character implements Combatant {
     defensePower: number,
     speed: number, 
     moves: Move[], 
-    potionsCount: number = 2, 
     equippedWeapon: Weapon | null = null,
     equippedArmor: Armor | null = null,
     itemsInBag: Equipment[] = [],
@@ -64,7 +63,7 @@ export class Character implements Combatant {
     this.speed = speed;
     this.moves = moves;
     this.inventory = { 
-        potions: potionsCount,
+        potions: 0, // Plus de compteur séparé
         items: itemsInBag
     };
     this.equippedWeapon = equippedWeapon; 
@@ -73,6 +72,12 @@ export class Character implements Combatant {
     this.level = level;
     this.xp = 0;
     this.hp = this.maxHp; // Utilise le getter maxHp calculé selon le niveau
+    
+    // Si le sac est vide, ajouter 2 potions initiales
+    if (this.inventory.items.length === 0) {
+      this.inventory.items.push(createPotion(40));
+      this.inventory.items.push(createPotion(40));
+    }
 
   }
 
@@ -212,12 +217,16 @@ export class Character implements Combatant {
   }
 
   usePotion(): boolean {
-    if (this.inventory.potions > 0 && this.hp < this.maxHp) {
-      this.inventory.potions--;
-      this.heal(40); // Soigne 40 PV fixes par exemple
+    // Chercher une potion dans le sac
+    const potionIndex = this.inventory.items.findIndex(item => item.type === 'potion');
+    
+    if (potionIndex !== -1 && this.hp < this.maxHp) {
+      const potion = this.inventory.items[potionIndex] as Potion;
+      this.inventory.items.splice(potionIndex, 1); // Retirer la potion du sac
+      this.heal(potion.healAmount); // Soigner selon la puissance de la potion
       return true;
     }
-    return false; // Impossible si sac vide ou PV déjà max
+    return false; // Impossible si pas de potion ou PV déjà max
   }
 
   // Réinitialisation complète pour le permadeath
@@ -228,14 +237,18 @@ export class Character implements Combatant {
     this.baseAttack = 10;
     this.baseDefense = 5;
     this.hp = this.maxHp;
-    this.inventory.potions = 2;
-    this.inventory.items = [];
+    this.inventory.potions = 0; // Plus de compteur de potions séparé
+    this.inventory.items = []; // Le sac sera rempli avec des potions
     this.equippedWeapon = null;
     this.equippedArmor = null;
     this.moves = [
       { name: '👊 Charge', damage: 15, type: 'attack', accuracy: 95 },
       { name: '🩹 Potion de Soin', damage: 30, type: 'heal', accuracy: 100 }
     ];
+    
+    // Ajouter 2 potions initiales dans le sac
+    this.inventory.items.push(createPotion(40));
+    this.inventory.items.push(createPotion(40));
   }
 
 }

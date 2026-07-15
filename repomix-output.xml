@@ -1,0 +1,2199 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+src/
+  Bestiary.ts
+  Character.ts
+  CombatEngine.ts
+  main.ts
+  Monster.ts
+  Scenario.ts
+  Skills.ts
+  StoryDatabase.ts
+  StoryManager.ts
+  Stuff.ts
+  UIManager.ts
+index.html
+LICENSE
+package.json
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="src/Monster.ts">
+import { Combatant, Move } from './Character';
+
+export class Monster implements Combatant {
+  name: string;
+  baseMaxHp: number;
+  baseAttack: number;
+  baseDefense: number;
+  speed: number;
+  moves: Move[];
+  level: number;
+  hp: number;
+
+  constructor(
+    name: string,
+    maxHp: number,
+    attackPower: number,
+    defensePower: number,
+    speed: number,
+    moves: Move[],
+    level: number = 1
+  ) {
+    this.name = name;
+    this.baseMaxHp = maxHp;
+    this.baseAttack = attackPower;
+    this.baseDefense = defensePower;
+    this.speed = speed;
+    this.moves = moves;
+    this.level = level;
+    this.hp = this.maxHp;
+  }
+
+  // GETTERS : Ces valeurs se mettent à jour automatiquement selon le niveau
+  get maxHp(): number {
+    return this.baseMaxHp + (this.level - 1) * 15;
+  }
+
+  get attackPower(): number {
+    return this.baseAttack + (this.level - 1) * 3;
+  }
+
+  get defense(): number {
+    return this.baseDefense + (this.level - 1) * 2;
+  }
+
+  isAlive(): boolean {
+    return this.hp > 0;
+  }
+
+  takeDamage(amount: number) {
+    this.hp = Math.max(0, this.hp - amount);
+  }
+
+  heal(amount: number) {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+}
+</file>
+
+<file path="src/Scenario.ts">
+export interface Choice {
+  id: string;
+  text: string;
+  consequence: ScenarioConsequence;
+}
+
+export interface ScenarioConsequence {
+  type: 'combat' | 'reward' | 'damage' | 'heal' | 'story' | 'death' | 'offer';
+  value?: number;
+  nextScenarioId?: string;
+  description?: string;
+  enemyLevel?: number;
+  enemyType?: 'goblin' | 'orc' | 'ghost' | 'dragon';
+  xpReward?: number;
+  itemReward?: string;
+  requiredItemType?: 'potion' | 'weapon' | 'armor' | 'any';
+  requiredItemRarity?: 'common' | 'rare' | 'epic' | 'legendary';
+}
+
+export interface Scenario {
+  id: string;
+  title: string;
+  description: string;
+  choices: Choice[];
+  isCombat?: boolean;
+  enemyLevel?: number;
+}
+
+export type ScenarioMap = Record<string, Scenario>;
+</file>
+
+<file path="src/Skills.ts">
+import { Move } from './Character';
+
+// Dictionnaire des compétences déblocables selon le niveau du joueur
+export const skillCatalog: Record<number, Move> = {
+  2: { name: '🔥 Lance-Flamme', damage: 25, type: 'attack', accuracy: 85 },
+  3: { name: '🛡️ Peau de Pierre', damage: 35, type: 'heal', accuracy: 100 },
+  4: { name: '⚡ Éclair de Foudre', damage: 45, type: 'attack', accuracy: 75 },
+  5: { name: '🌟 Jugement Dernier', damage: 60, type: 'attack', accuracy: 90 }
+};
+
+// Fonction pour vérifier si une compétence est disponible pour un niveau précis
+export function getSkillForLevel(level: number): Move | null {
+  return skillCatalog[level] || null;
+}
+</file>
+
+<file path="src/StoryDatabase.ts">
+import { Scenario, ScenarioMap } from './Scenario';
+
+export const STORY_DATABASE: ScenarioMap = {
+  // === INTRODUCTION ===
+  'intro': {
+    id: 'intro',
+    title: 'Le Réveil',
+    description: 'Vous vous réveillez dans une forêt sombre, votre mémoire est floue. Vous ne vous souvenez que de votre nom : Kevin. À vos pieds, une épée rouillée gît dans la boue.',
+    choices: [
+      {
+        id: 'take_sword',
+        text: '🗡️ Ramasser l\'épée et explorer la forêt',
+        consequence: {
+          type: 'reward',
+          itemReward: 'w_rust_dagger',
+          description: 'Vous trouvez une dague rouillée dans vos poches.',
+          nextScenarioId: 'forest_path'
+        }
+      },
+      {
+        id: 'ignore_sword',
+        text: '🚶 Ignorer l\'épée et marcher vers la clairière',
+        consequence: {
+          type: 'story',
+          description: 'Vous décidez de vous fier à vos poings. La forêt semble vous observer.',
+          nextScenarioId: 'forest_clearing'
+        }
+      }
+    ]
+  },
+
+  // === FORÊT ===
+  'forest_path': {
+    id: 'forest_path',
+    title: 'Le Sentier Obscur',
+    description: 'Le sentier s\'enfonce dans les bois. Vous entendez des bruits étranges. Soudain, un gobelin surgit des buissons !',
+    choices: [
+      {
+        id: 'fight_goblin',
+        text: '⚔️ Combattre le gobelin',
+        consequence: {
+          type: 'combat',
+          enemyLevel: 1,
+          enemyType: 'goblin',
+          description: 'Un gobelin chapardeur vous attaque !',
+          xpReward: 50,
+          nextScenarioId: 'forest_village'
+        }
+      },
+      {
+        id: 'flee',
+        text: '🏃 Fuir',
+        consequence: {
+          type: 'damage',
+          value: 10,
+          description: 'Vous fuyez mais le gobelin vous griffe le dos.',
+          nextScenarioId: 'forest_clearing'
+        }
+      }
+    ]
+  },
+
+  'forest_clearing': {
+    id: 'forest_clearing',
+    title: 'La Clairière',
+    description: 'Vous arrivez dans une clairière. Un vieux ermite médite près d\'un feu. Il semble vous avoir attendu.',
+    choices: [
+      {
+        id: 'talk_hermit',
+        text: '🗣️ Parler à l\'ermite',
+        consequence: {
+          type: 'reward',
+          value: 30,
+          description: 'L\'ermite partage sa sagesse et vous donne des conseils de combat.',
+          nextScenarioId: 'hermit_teaching'
+        }
+      },
+      {
+        id: 'ignore_hermit',
+        text: '🚶 Continuer votre chemin',
+        consequence: {
+          type: 'story',
+          description: 'Vous laissez l\'ermite à sa méditation et continuez vers le nord.',
+          nextScenarioId: 'northern_path'
+        }
+      }
+    ]
+  },
+
+  'hermit_teaching': {
+    id: 'hermit_teaching',
+    title: 'L\'Enseignement',
+    description: '"Le monde est en péril, jeune voyageur. Les ombres s\'étendent. Seuls les courageux peuvent les repousser." L\'ermite vous tend une potion.',
+    choices: [
+      {
+        id: 'accept_potion',
+        text: '🧪 Accepter la potion',
+        consequence: {
+          type: 'heal',
+          value: 40,
+          description: 'L\'ermite vous donne une potion de soin.',
+          nextScenarioId: 'northern_path'
+        }
+      },
+      {
+        id: 'ask_more',
+        text: '❓ Demander plus d\'informations',
+        consequence: {
+          type: 'story',
+          description: '"Cherchez le village au nord. Ils sauront vous guider."',
+          nextScenarioId: 'northern_path'
+        }
+      }
+    ]
+  },
+
+  // === VILLAGE ===
+  'forest_village': {
+    id: 'forest_village',
+    title: 'Le Village Abandonné',
+    description: 'Vous découvrez un village en ruines. Des traces de combat sont partout. Soudain, un orque enragé surgit des décombres !',
+    choices: [
+      {
+        id: 'fight_orc',
+        text: '⚔️ Affronter l\'orque',
+        consequence: {
+          type: 'combat',
+          enemyLevel: 2,
+          enemyType: 'orc',
+          description: 'Un orque enragé vous barre la route !',
+          xpReward: 100,
+          nextScenarioId: 'village_survivor'
+        }
+      },
+      {
+        id: 'sneak',
+        text: '🤥 Essayer de se faufiler',
+        consequence: {
+          type: 'story',
+          description: 'Vous réussissez à vous faufiler discrètement.',
+          nextScenarioId: 'village_survivor'
+        }
+      }
+    ]
+  },
+
+  'village_survivor': {
+    id: 'village_survivor',
+    title: 'Le Survivant',
+    description: 'Au fond du village, vous trouvez un survivant blessé. "Les ombres... elles viennent de la montagne..."',
+    choices: [
+      {
+        id: 'help_survivor',
+        text: '❤️ Aider le survivant',
+        consequence: {
+          type: 'heal',
+          value: 20,
+          description: 'Vous partagez vos ressources pour le soigner.',
+          nextScenarioId: 'mountain_path'
+        }
+      },
+      {
+        id: 'leave_survivor',
+        text: '💀 Laisser le survivant',
+        consequence: {
+          type: 'story',
+          description: 'Vous décidez de poursuivre votre route sans vous attarder.',
+          nextScenarioId: 'mountain_path'
+        }
+      }
+    ]
+  },
+
+  // === MONTAGNE ===
+  'northern_path': {
+    id: 'northern_path',
+    title: 'Le Chemin du Nord',
+    description: 'Le chemin vers le nord est escarpé. Vous apercevez une grotte sombre. Des éclairs bleus en sortent par moments.',
+    choices: [
+      {
+        id: 'enter_cave',
+        text: '🕳️ Entrer dans la grotte',
+        consequence: {
+          type: 'combat',
+          enemyLevel: 3,
+          enemyType: 'ghost',
+          description: 'Un spectre errant hante cette grotte !',
+          xpReward: 150,
+          nextScenarioId: 'cave_treasure'
+        }
+      },
+      {
+        id: 'avoid_cave',
+        text: '⛰️ Contourner la grotte',
+        consequence: {
+          type: 'damage',
+          value: 15,
+          description: 'Le chemin est difficile, vous vous blessez en grimpant.',
+          nextScenarioId: 'mountain_path'
+        }
+      }
+    ]
+  },
+
+  'cave_treasure': {
+    id: 'cave_treasure',
+    title: 'Le Trésor',
+    description: 'Après avoir vaincu le spectre, vous découvrez un coffre ancien.',
+    choices: [
+      {
+        id: 'open_chest',
+        text: '📦 Ouvrir le coffre',
+        consequence: {
+          type: 'reward',
+          itemReward: 'w_iron_sword',
+          description: 'Vous trouvez une épée en fer court !',
+          nextScenarioId: 'mountain_path'
+        }
+      },
+      {
+        id: 'leave_chest',
+        text: '🚶 Laisser le coffre',
+        consequence: {
+          type: 'story',
+          description: 'Vous décidez de ne pas toucher à ce qui ne vous appartient pas.',
+          nextScenarioId: 'mountain_path'
+        }
+      }
+    ]
+  },
+
+  'mountain_path': {
+    id: 'mountain_path',
+    title: 'La Montagne Maudite',
+    description: 'Vous arrivez au pied de la montagne. Un dragonnet garde le passage. Il semble agressif.',
+    choices: [
+      {
+        id: 'fight_dragon',
+        text: '⚔️ Combattre le dragonnet',
+        consequence: {
+          type: 'combat',
+          enemyLevel: 4,
+          enemyType: 'dragon',
+          description: 'Un jeune dragonnet vous défie !',
+          xpReward: 200,
+          nextScenarioId: 'dragon_victory'
+        }
+      },
+      {
+        id: 'negotiate',
+        text: '🗣️ Essayer de négocier',
+        consequence: {
+          type: 'story',
+          description: 'Le dragonnet semble comprendre votre langage mais reste méfiant.',
+          nextScenarioId: 'dragon_negotiation'
+        }
+      }
+    ]
+  },
+
+  'dragon_negotiation': {
+    id: 'dragon_negotiation',
+    title: 'La Négociation',
+    description: 'Le dragonnet vous écoute. "Je peux te laisser passer... mais tu dois me prouver ta valeur."',
+    choices: [
+      {
+        id: 'offer_item',
+        text: '🎁 Offrir un objet de votre inventaire',
+        consequence: {
+          type: 'offer',
+          requiredItemType: 'any',
+          description: 'Le dragonnet accepte votre offrande et vous laisse passer.',
+          nextScenarioId: 'summit'
+        }
+      },
+      {
+        id: 'refuse',
+        text: '🚫 Refuser et combattre',
+        consequence: {
+          type: 'combat',
+          enemyLevel: 4,
+          enemyType: 'dragon',
+          description: 'Le dragonnet s\'irrite et attaque !',
+          xpReward: 200,
+          nextScenarioId: 'dragon_victory'
+        }
+      }
+    ]
+  },
+
+  // === FIN ===
+  'dragon_victory': {
+    id: 'dragon_victory',
+    title: 'La Victoire',
+    description: 'Le dragonnet tombe, vaincu. Au sommet de la montagne, vous découvrez la source des ombres : un portail scellé.',
+    choices: [
+      {
+        id: 'approach_portal',
+        text: '🌀 S\'approcher du portail',
+        consequence: {
+          type: 'story',
+          description: 'Le portail pulse d\'une énergie étrange. Votre aventure ne fait que commencer...',
+          nextScenarioId: 'ending'
+        }
+      }
+    ]
+  },
+
+  'summit': {
+    id: 'summit',
+    title: 'Le Sommet',
+    description: 'Vous atteignez le sommet de la montagne. La vue est imprenable. Au loin, vous voyez d\'autres montagnes, d\'autres défis.',
+    choices: [
+      {
+        id: 'rest',
+        text: '🏕️ Faire camp et se reposer',
+        consequence: {
+          type: 'heal',
+          value: 50,
+          description: 'Vous vous reposez et récupérez vos forces.',
+          nextScenarioId: 'ending'
+        }
+      },
+      {
+        id: 'continue',
+        text: '🗺️ Continuer l\'exploration',
+        consequence: {
+          type: 'story',
+          description: 'Votre quête continue vers de nouveaux horizons.',
+          nextScenarioId: 'ending'
+        }
+      }
+    ]
+  },
+
+  'ending': {
+    id: 'ending',
+    title: 'Fin du Chapitre 1',
+    description: 'Vous avez survécu à cette première épreuve. Mais le monde est vaste et les dangers nombreux. Votre légende ne fait que commencer...',
+    choices: [
+      {
+        id: 'rest_and_restart',
+        text: '🔄 Se reposer et recommencer une nouvelle aventure',
+        consequence: {
+          type: 'heal',
+          value: 9999,
+          description: 'Vous vous reposez et récupérez toutes vos forces. Une nouvelle légende peut commencer.',
+          nextScenarioId: 'intro'
+        }
+      }
+    ]
+  },
+
+  // === SCÉNARIOS DE MORT ===
+  'death_combat': {
+    id: 'death_combat',
+    title: '💀 DÉFAITE',
+    description: 'Vous êtes tombé au combat. Votre voyage s\'arrête ici. Les ombres continuent de s\'étendre...',
+    choices: [
+      {
+        id: 'try_again',
+        text: '🔄 Essayer à nouveau',
+        consequence: {
+          type: 'death',
+          description: 'Une nouvelle âme courageuse se lève.',
+          nextScenarioId: 'intro'
+        }
+      }
+    ]
+  }
+};
+</file>
+
+<file path="src/StoryManager.ts">
+import { Character } from './Character';
+import { Scenario, Choice, ScenarioConsequence } from './Scenario';
+import { STORY_DATABASE } from './StoryDatabase';
+import { getRandomMonster, getMonsterByType } from './Bestiary';
+import { Monster } from './Monster';
+import { getRandomEquipmentLoot } from './Stuff';
+import { Equipment } from './Stuff';
+
+export class StoryManager {
+  private currentScenarioId: string;
+  private player: Character;
+  private onScenarioChange: (scenario: Scenario) => void;
+  private onLog: (message: string) => void;
+  private onCombatStart: (enemy: Monster) => void;
+
+  constructor(
+    player: Character,
+    onScenarioChange: (scenario: Scenario) => void,
+    onLog: (message: string) => void,
+    onCombatStart: (enemy: Monster) => void
+  ) {
+    this.player = player;
+    this.onScenarioChange = onScenarioChange;
+    this.onLog = onLog;
+    this.onCombatStart = onCombatStart;
+    this.currentScenarioId = 'intro';
+  }
+
+  getCurrentScenario(): Scenario {
+    return STORY_DATABASE[this.currentScenarioId];
+  }
+
+  makeChoice(choiceId: string): void {
+    const scenario = this.getCurrentScenario();
+    const choice = scenario.choices.find(c => c.id === choiceId);
+    
+    if (!choice) {
+      console.error(`Choice ${choiceId} not found in scenario ${scenario.id}`);
+      return;
+    }
+
+    // Vérifier si le choix est disponible (offrande avec objet requis)
+    if (choice.consequence.type === 'offer' && !this.canMakeChoice(choice)) {
+      this.onLog(`⚠️ **Impossible** : Vous n'avez pas l'objet requis.`);
+      return;
+    }
+
+    this.applyConsequence(choice.consequence);
+  }
+
+  canMakeChoice(choice: Choice): boolean {
+    const consequence = choice.consequence;
+    
+    if (consequence.type === 'offer' && consequence.requiredItemType) {
+      return this.hasRequiredItem(consequence.requiredItemType, consequence.requiredItemRarity);
+    }
+    
+    return true;
+  }
+
+  private hasRequiredItem(itemType: string, rarity?: string): boolean {
+    if (itemType === 'potion') {
+      return this.player.inventory.items.some(item => item.type === 'potion');
+    }
+    
+    if (itemType === 'weapon' || itemType === 'armor' || itemType === 'any') {
+      const items = this.player.inventory.items;
+      if (items.length === 0) return false;
+      
+      if (!rarity) return items.length > 0;
+      
+      return items.some(item => 
+        (itemType === 'any' || item.type === itemType) && 
+        item.rarity === rarity
+      );
+    }
+    
+    return false;
+  }
+
+  private consumeRequiredItem(itemType: string, rarity?: string): void {
+    if (itemType === 'potion') {
+      const potionIndex = this.player.inventory.items.findIndex(item => item.type === 'potion');
+      if (potionIndex !== -1) {
+        this.player.inventory.items.splice(potionIndex, 1);
+        this.onLog(`🧪 **Offrande** : -1 Potion`);
+      }
+      return;
+    }
+    
+    if (itemType === 'weapon' || itemType === 'armor' || itemType === 'any') {
+      const items = this.player.inventory.items;
+      const itemIndex = items.findIndex(item => 
+        (itemType === 'any' || item.type === itemType) && 
+        (!rarity || item.rarity === rarity)
+      );
+      
+      if (itemIndex !== -1) {
+        const removedItem = items.splice(itemIndex, 1)[0];
+        this.onLog(`🎁 **Offrande** : ${removedItem.name} sacrifié.`);
+      }
+    }
+  }
+
+  private applyConsequence(consequence: ScenarioConsequence): void {
+    switch (consequence.type) {
+      case 'combat':
+        this.handleCombat(consequence);
+        break;
+      case 'reward':
+        this.handleReward(consequence);
+        break;
+      case 'damage':
+        this.handleDamage(consequence);
+        break;
+      case 'heal':
+        this.handleHeal(consequence);
+        break;
+      case 'story':
+        this.handleStory(consequence);
+        break;
+      case 'death':
+        this.handleDeath(consequence);
+        break;
+      case 'offer':
+        this.handleOffer(consequence);
+        break;
+    }
+  }
+
+  private handleCombat(consequence: ScenarioConsequence): void {
+    const enemyLevel = consequence.enemyLevel || 1;
+    let enemy: Monster;
+    
+    if (consequence.enemyType) {
+      enemy = getMonsterByType(consequence.enemyType, enemyLevel);
+    } else {
+      enemy = getRandomMonster(enemyLevel);
+    }
+    
+    this.onLog(`⚔️ **COMBAT** : ${consequence.description}`);
+    this.onCombatStart(enemy);
+    
+    // Note: Le scénario suivant sera déterminé après le combat
+    this.currentScenarioId = consequence.nextScenarioId || 'intro';
+  }
+
+  private handleReward(consequence: ScenarioConsequence): void {
+    if (consequence.value) {
+      this.player.xp += consequence.value;
+      this.onLog(`✨ **Récompense** : +${consequence.value} XP`);
+    }
+    
+    if (consequence.itemReward) {
+      const loot = getRandomEquipmentLoot(this.player.level);
+      if (loot) {
+        this.player.addItemToInventory(loot);
+        this.onLog(`🎒 **Objet trouvé** : ${loot.name}`);
+      }
+    }
+    
+    if (consequence.description) {
+      this.onLog(`📖 ${consequence.description}`);
+    }
+    
+    this.transitionToNextScenario(consequence.nextScenarioId);
+  }
+
+  private handleDamage(consequence: ScenarioConsequence): void {
+    const damage = consequence.value || 10;
+    this.player.takeDamage(damage);
+    this.onLog(`💔 **Dégâts** : -${damage} PV`);
+    
+    if (!this.player.isAlive()) {
+      this.handleDeath(consequence);
+      return;
+    }
+    
+    if (consequence.description) {
+      this.onLog(`📖 ${consequence.description}`);
+    }
+    
+    this.transitionToNextScenario(consequence.nextScenarioId);
+  }
+
+  private handleHeal(consequence: ScenarioConsequence): void {
+    const healAmount = consequence.value || 20;
+    this.player.heal(healAmount);
+    this.onLog(`💚 **Soin** : +${healAmount} PV`);
+    
+    if (consequence.description) {
+      this.onLog(`📖 ${consequence.description}`);
+    }
+    
+    this.transitionToNextScenario(consequence.nextScenarioId);
+  }
+
+  private handleStory(consequence: ScenarioConsequence): void {
+    if (consequence.description) {
+      this.onLog(`📖 ${consequence.description}`);
+    }
+    
+    this.transitionToNextScenario(consequence.nextScenarioId);
+  }
+
+  private handleDeath(consequence: ScenarioConsequence): void {
+    this.onLog(`💀 **MORT** : ${consequence.description || 'Votre voyage s\'arrête ici.'}`);
+    this.triggerPermadeath();
+  }
+
+  private handleOffer(consequence: ScenarioConsequence): void {
+    const itemType = consequence.requiredItemType || 'any';
+    const rarity = consequence.requiredItemRarity;
+    
+    this.consumeRequiredItem(itemType, rarity);
+    
+    if (consequence.description) {
+      this.onLog(`📖 ${consequence.description}`);
+    }
+    
+    this.transitionToNextScenario(consequence.nextScenarioId);
+  }
+
+  private transitionToNextScenario(nextScenarioId?: string): void {
+    if (nextScenarioId) {
+      this.currentScenarioId = nextScenarioId;
+      const nextScenario = this.getCurrentScenario();
+      this.onScenarioChange(nextScenario);
+    }
+  }
+
+  private triggerPermadeath(): void {
+    // Réinitialisation complète du personnage
+    localStorage.clear();
+    this.player.resetCharacter();
+    
+    // Revenir au scénario d'introduction
+    this.currentScenarioId = 'intro';
+    setTimeout(() => {
+      this.onScenarioChange(this.getCurrentScenario());
+    }, 2000);
+  }
+
+  onCombatVictory(): void {
+    const scenario = this.getCurrentScenario();
+    const currentChoice = scenario.choices.find(c => c.consequence.type === 'combat');
+    
+    if (currentChoice && currentChoice.consequence.xpReward) {
+      this.player.xp += currentChoice.consequence.xpReward;
+      this.onLog(`✨ **Victoire** : +${currentChoice.consequence.xpReward} XP`);
+    }
+    
+    // Vérifier level up
+    const xpResult = this.player.gainXp(0); // XP déjà ajouté
+    if (xpResult.leveledUp) {
+      this.onLog(`🆙 **LEVEL UP !** Niveau ${this.player.level} !`);
+    }
+    
+    // Transition au scénario suivant
+    this.transitionToNextScenario(currentChoice?.consequence.nextScenarioId);
+  }
+
+  onCombatDefeat(): void {
+    this.currentScenarioId = 'death_combat';
+    this.onScenarioChange(this.getCurrentScenario());
+  }
+
+  resetStory(): void {
+    this.currentScenarioId = 'intro';
+    this.onScenarioChange(this.getCurrentScenario());
+  }
+
+  usePotion(): boolean {
+    return this.player.usePotion();
+  }
+}
+</file>
+
+<file path="src/Stuff.ts">
+export type EquipmentType = 'weapon' | 'armor' | 'potion';
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface BaseEquipment {
+  id: string;
+  name: string;
+  type: EquipmentType;
+  rarity: Rarity;
+  levelRequired: number;
+  description: string;
+}
+
+export interface Weapon extends BaseEquipment {
+  type: 'weapon';
+  bonusAtk: number;
+}
+
+export interface Armor extends BaseEquipment {
+  type: 'armor';
+  bonusDef: number;
+}
+
+export interface Potion extends BaseEquipment {
+  type: 'potion';
+  healAmount: number;
+}
+
+export type Equipment = Weapon | Armor | Potion;
+
+// 📖 LE DICTIONNAIRE COMPLET DU JEU
+export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[]; potions: Potion[] } = {
+  weapons: [
+    // --- NIVEAU 1 ---
+    { id: 'w_rust_dagger', name: 'Dague Rouillée', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 3, description: 'Mieux que rien, mais attention au tétanos.' },
+    { id: 'w_wooden_staff', name: 'Bâton d\'Initié', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 4, description: 'Un morceau de bois solidifié par la magie.' },
+    { id: 'w_iron_sword', name: 'Épée en Fer court', type: 'weapon', rarity: 'rare', levelRequired: 1, bonusAtk: 7, description: 'Une lame standard forgée pour les recrues.' },
+    
+    // --- NIVEAU 2 à 3 ---
+    { id: 'w_steel_mace', name: 'Masse en Acier', type: 'weapon', rarity: 'common', levelRequired: 2, bonusAtk: 10, description: 'Lourde et parfaite pour briser des os.' },
+    { id: 'w_ranger_bow', name: 'Arc de Chasseur', type: 'weapon', rarity: 'rare', levelRequired: 2, bonusAtk: 14, description: 'Un arc en bois d\'if d\'une grande précision.' },
+    { id: 'w_shadow_blade', name: 'Lame des Ombres', type: 'weapon', rarity: 'epic', levelRequired: 3, bonusAtk: 22, description: 'Une dague obscure qui semble absorber la lumière ambiante.' },
+
+    // --- NIVEAU 4 à 5 ---
+    { id: 'w_paladin_greatsword', name: 'Espadon de Justice', type: 'weapon', rarity: 'rare', levelRequired: 4, bonusAtk: 28, description: 'Une épée à deux mains bénie par les anciens.' },
+    { id: 'w_lava_axe', name: 'Hache de Magma', type: 'weapon', rarity: 'epic', levelRequired: 5, bonusAtk: 38, description: 'Forgée au cœur d\'un volcan, elle irradie de chaleur.' },
+    
+    // --- ENDGAME / LEGENDARY ---
+    { id: 'w_excalibur', name: 'Excalibur', type: 'weapon', rarity: 'legendary', levelRequired: 5, bonusAtk: 55, description: 'La lame mythique des rois. Sa puissance est sans limite.' }
+  ],
+  armors: [
+    // --- NIVEAU 1 ---
+    { id: 'a_ragged_clothes', name: 'Habits Déchirés', type: 'armor', rarity: 'common', levelRequired: 1, bonusDef: 2, description: 'Protège à peine du vent.' },
+    { id: 'a_leather_vest', name: 'Veste en Cuir', type: 'armor', rarity: 'rare', levelRequired: 1, bonusDef: 5, description: 'Souple et renforcée aux endroits critiques.' },
+    
+    // --- NIVEAU 2 à 3 ---
+    { id: 'a_chainmail', name: 'Cotte de Mailles', type: 'armor', rarity: 'common', levelRequired: 2, bonusDef: 10, description: 'Un assemblage de milliers d\'anneaux de fer.' },
+    { id: 'a_steel_breastplate', name: 'Plastron en Acier', type: 'armor', rarity: 'rare', levelRequired: 3, bonusDef: 18, description: 'Une armure lourde polie comme un miroir.' },
+
+    // --- NIVEAU 4 à 5 ---
+    { id: 'a_dragon_scale', name: 'Armure en Écailles de Dragon', type: 'armor', rarity: 'epic', levelRequired: 4, bonusDef: 30, description: 'Aussi légère que de la soie, aussi dure que le diamant.' },
+    { id: 'a_immortal_plate', name: 'Égide de l\'Immortel', type: 'armor', rarity: 'legendary', levelRequired: 5, bonusDef: 45, description: 'Une armure divine qui repousse le destin lui-même.' }
+  ],
+  potions: [
+    { id: 'p_health_small', name: 'Potion de Soin Mineure', type: 'potion', rarity: 'common', levelRequired: 1, healAmount: 30, description: 'Une petite fiole de liquide rouge. Guérit 30 PV.' },
+    { id: 'p_health_medium', name: 'Potion de Soin', type: 'potion', rarity: 'rare', levelRequired: 2, healAmount: 50, description: 'Un flacon standard de potion de soin. Guérit 50 PV.' },
+    { id: 'p_health_large', name: 'Potion de Soin Majeure', type: 'potion', rarity: 'epic', levelRequired: 4, healAmount: 80, description: 'Une potion puissante distillée par les alchimistes. Guérit 80 PV.' },
+    { id: 'p_health_ultimate', name: 'Élixir de Vie', type: 'potion', rarity: 'legendary', levelRequired: 5, healAmount: 100, description: 'Un élixir légendaire qui restaure la vitalité. Guérit 100 PV.' }
+  ]
+};
+
+export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
+  // 1. On détermine d'abord la rareté cible (Probabilités)
+  const randRarity = Math.random() * 100;
+  let targetRarity: 'common' | 'rare' | 'epic' | 'legendary' = 'common';
+
+  if (randRarity < 60) targetRarity = 'common';
+  else if (randRarity < 85) targetRarity = 'rare';
+  else if (randRarity < 97) targetRarity = 'epic';
+  else targetRarity = 'legendary';
+
+  // 2. On choisit le type d'objet : 40% Arme, 40% Armure, 20% Potion
+  const randType = Math.random() * 100;
+  let itemType: 'weapons' | 'armors' | 'potions';
+  
+  if (randType < 40) itemType = 'weapons';
+  else if (randType < 80) itemType = 'armors';
+  else itemType = 'potions';
+
+  // 3. On filtre la base de données selon le type, le niveau et la rareté
+  let validItems = ITEM_DATABASE[itemType].filter(
+    (item: any) => item.levelRequired <= enemyLevel && item.rarity === targetRarity
+  );
+
+  // 🛡️ Sécurité 1 : Si la rareté précise n'existe pas pour ce niveau, on prend tout ce qui matche le niveau dans cette catégorie
+  if (validItems.length === 0) {
+    validItems = ITEM_DATABASE[itemType].filter((item: any) => item.levelRequired <= enemyLevel);
+  }
+
+  // 🛡️ Sécurité 2 : Si la catégorie entière est vide, on se rabat sur les armes par défaut
+  if (validItems.length === 0) {
+    validItems = ITEM_DATABASE.weapons.filter(w => w.levelRequired <= enemyLevel);
+  }
+
+  if (validItems.length === 0) return null;
+
+  // 4. On pioche un objet au hasard et on lui donne un ID unique pour le sac
+  const randomIndex = Math.floor(Math.random() * validItems.length);
+  const selectedTemplate = validItems[randomIndex];
+
+  return {
+    ...selectedTemplate,
+    id: Math.random().toString(36).substring(2, 11)
+  };
+}
+
+export function createPotion(healAmount: number = 40): Potion {
+  return {
+    id: Math.random().toString(36).substring(2, 11),
+    name: 'Potion de Soin',
+    type: 'potion',
+    rarity: 'common',
+    levelRequired: 1,
+    healAmount: healAmount,
+    description: 'Une potion de soin standard.'
+  };
+}
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mon RPG 1v1</title>
+  </head>
+  <body>
+    <!-- C'est ici que l'UIManager va injecter le jeu -->
+    <div id="app"></div>
+    
+    <!-- On pointe vers le point d'entrée TypeScript -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+</file>
+
+<file path="LICENSE">
+MIT License
+
+Copyright (c) 2026 KevinKazama
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</file>
+
+<file path="package.json">
+{
+  "name": "project-rpg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KevinKazama/project-rpg.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KevinKazama/project-rpg/issues"
+  },
+  "homepage": "https://github.com/KevinKazama/project-rpg#readme"
+}
+</file>
+
+<file path="README.md">
+# project-rpg
+</file>
+
+<file path="src/Bestiary.ts">
+import { Monster } from './Monster';
+import { Move } from './Character';
+
+// 1. Liste de toutes les attaques possibles pour les monstres
+const monsterMoves: Record<string, Move[]> = {
+  goblin: [
+    { name: '🔪 Coup de Dague', damage: 10, type: 'attack', accuracy: 95 },
+    { name: '💨 Jet de Sable', damage: 5, type: 'attack', accuracy: 100 },
+    { name: '🧪 Potion Volée', damage: 15, type: 'heal', accuracy: 100 }
+  ],
+  orc: [
+    { name: '🪓 Coup de Hache', damage: 25, type: 'attack', accuracy: 70 },
+    { name: '💥 Fracas', damage: 16, type: 'attack', accuracy: 90 }
+  ],
+  ghost: [
+    { name: '👻 Hantise', damage: 14, type: 'attack', accuracy: 95 },
+    { name: '🔮 Vol de Vie', damage: 12, type: 'attack', accuracy: 85 },
+    { name: '🌌 Brume Spectrale', damage: 20, type: 'heal', accuracy: 100 }
+  ],
+  dragon: [
+    { name: '🔥 Souffle Ardent', damage: 35, type: 'attack', accuracy: 75 },
+    { name: '🐾 Écrasement', damage: 20, type: 'attack', accuracy: 90 }
+  ]
+};
+
+// 2. Définition des fiches de statistiques de base des monstres (Niveau 1)
+interface MonsterTemplate {
+  name: string;
+  hp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  moves: Move[];
+}
+
+const templates: MonsterTemplate[] = [
+  { name: 'Gobelin Chapardeur', hp: 70, attack: 7, defense: 5, speed: 18, moves: monsterMoves.goblin },
+  { name: 'Orque Enragé', hp: 140, attack: 12, defense: 5, speed: 7, moves: monsterMoves.orc },
+  { name: 'Spectre Errant', hp: 90, attack: 9, defense: 4, speed: 12, moves: monsterMoves.ghost },
+  { name: 'Jeune Dragonnet', hp: 180, attack: 15, defense: 8, speed: 11, moves: monsterMoves.dragon }
+];
+
+// 3. Fonction pour générer un monstre aléatoire mis à l'échelle du niveau du joueur
+export function getRandomMonster(playerLevel: number): Monster {
+  const randomIndex = Math.floor(Math.random() * templates.length);
+  const template = templates[randomIndex];
+
+  // On crée une vraie instance de Monster basée sur le modèle pioché
+  return new Monster(
+    template.name,
+    template.hp,
+    template.attack,
+    template.defense || 5,
+    template.speed,
+    template.moves,
+    playerLevel // Le monstre s'adapte direct au niveau du joueur !
+  );
+}
+
+// 4. Fonction pour générer un monstre spécifique par type
+export function getMonsterByType(enemyType: 'goblin' | 'orc' | 'ghost' | 'dragon', playerLevel: number): Monster {
+  const typeIndex: Record<string, number> = {
+    'goblin': 0,
+    'orc': 1,
+    'ghost': 2,
+    'dragon': 3
+  };
+
+  const template = templates[typeIndex[enemyType]];
+
+  return new Monster(
+    template.name,
+    template.hp,
+    template.attack,
+    template.defense || 5,
+    template.speed,
+    template.moves,
+    playerLevel
+  );
+}
+</file>
+
+<file path="src/Character.ts">
+import { Weapon, Armor, Equipment, Potion, createPotion } from './Stuff';
+
+export interface Move {
+  name: string;
+  damage: number;
+  type: 'attack' | 'heal';
+  accuracy: number;
+}
+
+export interface Combatant {
+  name: string;
+  moves: Move[];
+  attackPower: number;
+  hp: number;
+  maxHp: number;
+  level: number;
+  isAlive(): boolean;
+  takeDamage(amount: number): void;
+  heal(amount: number): void;
+}
+
+export interface Inventory {
+  potions: number;
+  items: Equipment[]
+
+}
+
+export class Character implements Combatant {
+  name: string;
+  baseMaxHp: number;    // Stocke les PV de base au niveau 1
+  baseAttack: number;   // Stocke l'attaque de base au niveau 1
+  baseDefense: number;  // Stocke la défense de base au niveau 1
+  speed: number;
+  moves: Move[];
+  inventory: Inventory;
+  equippedWeapon: Weapon | null;
+  equippedArmor: Armor | null;
+
+  // Nouvelles variables pour le RPG
+  level: number;
+  xp: number;
+  hp: number;
+
+  readonly MAX_BAG_SLOTS = 5;
+
+  constructor(
+    name: string, 
+    maxHp: number, 
+    attackPower: number, 
+    defensePower: number,
+    speed: number, 
+    moves: Move[], 
+    equippedWeapon: Weapon | null = null,
+    equippedArmor: Armor | null = null,
+    itemsInBag: Equipment[] = [],
+    level: number = 1
+  ) {
+    this.name = name;
+    this.baseMaxHp = maxHp;
+    this.baseAttack = attackPower;
+    this.baseDefense = defensePower;
+    this.speed = speed;
+    this.moves = moves;
+    this.inventory = { 
+        potions: 0, // Plus de compteur séparé
+        items: itemsInBag
+    };
+    this.equippedWeapon = equippedWeapon; 
+    this.equippedArmor = equippedArmor;
+
+    this.level = level;
+    this.xp = 0;
+    this.hp = this.maxHp; // Utilise le getter maxHp calculé selon le niveau
+    
+    // Si le sac est vide, ajouter 2 potions initiales
+    if (this.inventory.items.length === 0) {
+      this.inventory.items.push(createPotion(40));
+      this.inventory.items.push(createPotion(40));
+    }
+
+  }
+
+  addItemToInventory(item: Equipment): boolean {
+    if (!this.inventory.items) {
+      this.inventory.items = [];
+    }
+    
+    // Si on a atteint la limite, on refuse l'ajout
+    if (this.inventory.items.length >= this.MAX_BAG_SLOTS) {
+      return false; 
+    }
+
+    this.inventory.items.push(item);
+    return true;
+  }
+
+  // 🗑️ Nouvelle méthode : Permet de jeter un objet du sac à dos
+  removeItemFromBag(itemId: string): boolean {
+    const itemIndex = this.inventory.items.findIndex(i => i.id === itemId);
+    if (itemIndex === -1) return false;
+
+    this.inventory.items.splice(itemIndex, 1);
+    return true;
+  }
+
+  // ⚔️ Méthode pour équiper une arme depuis le sac à dos
+  equipWeaponFromBag(weaponId: string): boolean {
+    const itemIndex = this.inventory.items.findIndex(i => i.id === weaponId);
+    if (itemIndex === -1) return false;
+
+    const item = this.inventory.items[itemIndex];
+    if (item.type !== 'weapon') return false;
+
+    // Si on a déjà une arme, on la remet d'abord dans le sac !
+    if (this.equippedWeapon) {
+      this.inventory.items.push(this.equippedWeapon);
+    }
+
+    // On équipe la nouvelle et on la retire du sac
+    this.equippedWeapon = item as Weapon;
+    this.inventory.items.splice(itemIndex, 1);
+    return true;
+  }
+
+  equipArmorFromBag(armorId: string): boolean {
+    // 1. On cherche l'objet dans le sac
+    const itemIndex = this.inventory.items.findIndex(i => i.id === armorId);
+    if (itemIndex === -1) return false;
+
+    const item = this.inventory.items[itemIndex];
+    // Sécurité : on vérifie que c'est bien une armure
+    if (item.type !== 'armor') return false;
+
+    // 2. Si le joueur porte déjà une armure, on la remet dans le sac
+    if (this.equippedArmor) {
+      this.inventory.items.push(this.equippedArmor);
+    }
+
+    // 3. On équipe la nouvelle armure et on la retire du sac
+    this.equippedArmor = item as Armor;
+    this.inventory.items.splice(itemIndex, 1);
+    return true;
+  }
+
+  // GETTERS : Ces valeurs se mettent à jour automatiquement selon le niveau !
+  get maxHp(): number {
+    // Formule simple : +15 PV max par niveau gagné
+    return this.baseMaxHp + (this.level - 1) * 15;
+  }
+
+  get attackPower(): number {
+    // Formule simple : +3 d'attaque par niveau gagné
+    const weaponBonus = this.equippedWeapon ? this.equippedWeapon.bonusAtk : 0;
+    return this.baseAttack + (this.level - 1) * 3 + weaponBonus;
+  }
+
+  get defense(): number {
+    // Formule simple : +2 de défense par niveau gagné
+    const armorBonus = this.equippedArmor ? this.equippedArmor.bonusDef : 0;
+    return this.baseDefense + (this.level - 1) * 2 + armorBonus;
+  }
+
+  // Calcul du seuil d'XP requis pour le prochain niveau (style Pokémon)
+  getXpNeededForNextLevel(): number {
+    return this.level * 100; // Niveau 1 = 100 XP, Niveau 2 = 200 XP, etc.
+  }
+
+  isAlive(): boolean {
+    return this.hp > 0;
+  }
+
+  takeDamage(amount: number) {
+    this.hp = Math.max(0, this.hp - amount);
+  }
+
+  heal(amount: number) {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+  }
+
+  // Fonction pour ajouter de l'XP et gérer le Level Up
+  gainXp(amount: number): { logs: string[], leveledUp: boolean } {
+    let leveledUp = false;
+    const logs: string[] = [];
+    this.xp += amount;
+    logs.push(`✨ ${this.name} gagne **${amount} points d'expérience** !`);
+
+    // Vérifie le passage de niveau
+    while (this.xp >= this.getXpNeededForNextLevel()) {
+      this.xp -= this.getXpNeededForNextLevel();
+      this.level++;
+      leveledUp = true;
+      
+      // On soigne entièrement les PV à la montée de niveau
+      this.hp = this.maxHp; 
+      logs.push(`🆙 **LEVEL UP !** ${this.name} passe au **Niveau ${this.level}** !`);
+    }
+
+    return { logs, leveledUp };
+  }
+
+  // Fonctions pour appliquer le bonus choisi par le joueur
+  applyHpBonus() {
+    this.baseMaxHp += 25; // Gros bonus de PV Max
+    this.hp = this.maxHp; // Soigne le bonus
+  }
+
+  applyAttackBonus() {
+    this.baseAttack += 5; // Gros bonus d'Attaque
+  }
+
+  learnMove(move: Move) {
+    // Évite les doublons au cas où
+    if (!this.moves.some(m => m.name === move.name)) {
+      this.moves.push(move);
+    }
+  }
+
+  usePotion(): boolean {
+    // Chercher une potion dans le sac
+    const potionIndex = this.inventory.items.findIndex(item => item.type === 'potion');
+    
+    if (potionIndex !== -1 && this.hp < this.maxHp) {
+      const potion = this.inventory.items[potionIndex] as Potion;
+      this.inventory.items.splice(potionIndex, 1); // Retirer la potion du sac
+      this.heal(potion.healAmount); // Soigner selon la puissance de la potion
+      return true;
+    }
+    return false; // Impossible si pas de potion ou PV déjà max
+  }
+
+  // Réinitialisation complète pour le permadeath
+  resetCharacter() {
+    this.level = 1;
+    this.xp = 0;
+    this.baseMaxHp = 100;
+    this.baseAttack = 10;
+    this.baseDefense = 5;
+    this.hp = this.maxHp;
+    this.inventory.potions = 0; // Plus de compteur de potions séparé
+    this.inventory.items = []; // Le sac sera rempli avec des potions
+    this.equippedWeapon = null;
+    this.equippedArmor = null;
+    this.moves = [
+      { name: '👊 Charge', damage: 15, type: 'attack', accuracy: 95 },
+      { name: '🩹 Potion de Soin', damage: 30, type: 'heal', accuracy: 100 }
+    ];
+    
+    // Ajouter 2 potions initiales dans le sac
+    this.inventory.items.push(createPotion(40));
+    this.inventory.items.push(createPotion(40));
+  }
+
+}
+</file>
+
+<file path="src/CombatEngine.ts">
+import { Character, Combatant, Move } from './Character';
+import { Monster } from './Monster';
+import { getRandomMonster } from './Bestiary';
+import { getRandomEquipmentLoot } from './Stuff';
+import { StoryManager } from './StoryManager';
+
+export class CombatEngine {
+  player: Character;
+  enemy: Monster;
+  onLogCallback: (message: string) => void;
+  onUpdateUICallback: () => void;
+  private storyManager: StoryManager | null = null;
+
+  constructor(player: Character, enemy: Monster, onLog: (msg: string) => void, onUpdateUI: () => void) {
+    this.player = player;
+    this.enemy = enemy;
+    this.onLogCallback = onLog;
+    this.onUpdateUICallback = onUpdateUI;
+  }
+
+  setStoryManager(storyManager: StoryManager) {
+    this.storyManager = storyManager;
+  }
+
+  // Déclenche un round complet après le choix du joueur
+  executeRound(playerMove: Move) {
+// 1. L'ennemi choisit une action au hasard
+    const enemyMove = this.enemy.moves[Math.floor(Math.random() * this.enemy.moves.length)];
+
+    // 2. Déterminer l'ordre d'action basé sur la vitesse
+    if (this.player.speed >= this.enemy.speed) {
+      this.executeMove(this.player, this.enemy, playerMove);
+      if (this.enemy.isAlive()) {
+        this.executeMove(this.enemy, this.player, enemyMove);
+      }
+    } else {
+      this.executeMove(this.enemy, this.player, enemyMove);
+      if (this.player.isAlive()) {
+        this.executeMove(this.player, this.enemy, playerMove);
+      }
+    }
+
+    // 3. Vérifier la fin de partie
+    this.checkBattleStatus();
+    this.onUpdateUICallback();
+  }
+
+  private executeMove(attacker: Combatant, defender: Combatant, move: Move) {
+    // Calcul de la précision
+    const roll = Math.random() * 100;
+    if (roll > move.accuracy) {
+      this.onLogCallback(`${attacker.name} rate son attaque : ${move.name} !`);
+      return;
+    }
+
+    if (move.type === 'attack') {
+      // Formule de dégâts basique : dégâts de la capacité + modificateur d'attaque du perso
+      const baseDamage = move.damage + Math.floor(attacker.attackPower * 0.5);
+      // Ajout d'un petit facteur aléatoire (+/- 10%) pour le style RPG
+      const randomFactor = 0.9 + Math.random() * 0.2;
+      const finalDamage = Math.floor(baseDamage * randomFactor);
+
+      // Coup critique (10% de chance)
+      const isCritical = Math.random() < 0.1;
+      const criticalDamage = isCritical ? Math.floor(finalDamage * 1.5) : finalDamage;
+
+      defender.takeDamage(criticalDamage);
+      this.onLogCallback(`${attacker.name} utilise **${move.name}** ! ${isCritical ? '⚡ COUP CRITIQUE ! ' : ''}${defender.name} perd ${criticalDamage} PV.`);
+    } 
+    
+    else if (move.type === 'heal') {
+      attacker.heal(move.damage);
+      this.onLogCallback(`${attacker.name} utilise **${move.name}** et récupère ${move.damage} PV !`);
+    }
+  }
+
+  isChoosingBonus: boolean = false;
+
+  private checkBattleStatus() {
+    if (!this.player.isAlive()) {
+      this.onLogCallback(`❌ **K.O.** ! ${this.player.name} a perdu le combat...`);
+      
+      // Si on est en mode histoire, notifier le StoryManager
+      if (this.storyManager) {
+        this.storyManager.onCombatDefeat();
+      }
+    } else if (!this.enemy.isAlive()) {
+      this.onLogCallback(`🏆 **VICTOIRE** ! ${this.enemy.name} a mordu la poussière !`);
+     
+      if (Math.random() < 0.30) {
+        const newPotion = getRandomEquipmentLoot(this.enemy.level);
+        if (newPotion && newPotion.type === 'potion') {
+          this.player.addItemToInventory(newPotion);
+          this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
+          localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+        }
+      }
+
+      if (Math.random() < 0.95) {
+        // Appellera notre nouvelle fonction générique (pense à l'importer en haut si besoin)
+        const newLoot = getRandomEquipmentLoot(this.enemy.level); 
+
+        if (newLoot) {
+          const addedSuccessfully = this.player.addItemToInventory(newLoot);
+          
+          if (addedSuccessfully) {
+            const rarityStars = newLoot.rarity === 'legendary' ? '✨✨' : '';
+            const typeLabel = newLoot.type === 'weapon' ? 'ARME' : 'ARMURE';
+            
+            this.onLogCallback(`\n🎒 **BUTIN AJOUTÉ AU SAC (${newLoot.rarity.toUpperCase()})** ${rarityStars}`);
+            this.onLogCallback(` Vous avez trouvé une ${typeLabel} : **${newLoot.name}** !`);
+            this.onLogCallback(` *"${newLoot.description}"* \n`);
+            
+            localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+          } else {
+            this.onLogCallback(`\n⚠️ **SAC PLEIN !** Tu as trouvé **${newLoot.name}** mais ton sac à dos est plein.`);
+          }
+
+          if (this.onUpdateUICallback) {
+            this.onUpdateUICallback();
+          }
+        }
+      }
+
+      const xpGained = this.enemy.level * 50;
+      const xpResult = this.player.gainXp(xpGained);
+      xpResult.logs.forEach(log => this.onLogCallback(log));
+
+      if (xpResult.leveledUp) {
+        this.isChoosingBonus = true;
+        this.onLogCallback(`🎁 Choisissez une récompense de niveau !`);
+      }
+
+      // Sauvegarde immédiate du niveau et de l'XP
+      localStorage.setItem('rpg_player_level', this.player.level.toString());
+      localStorage.setItem('rpg_player_xp', this.player.xp.toString());
+      // On sauvegarde aussi les stats de base qui ont pu changer via les bonus précédents
+      localStorage.setItem('rpg_player_base_hp', this.player.baseMaxHp.toString());
+      localStorage.setItem('rpg_player_base_atk', this.player.baseAttack.toString());
+      
+      // Si on est en mode histoire, notifier le StoryManager
+      if (this.storyManager) {
+        this.storyManager.onCombatVictory();
+      }
+    }
+  }
+
+  startNewCombat() {
+    // 1. On recrée ou met à jour l'ennemi au niveau actuel du joueur pour garder du défi
+    this.enemy = getRandomMonster(this.player.level);
+
+    // 2. On déclenche les rafraîchissements visuels
+    this.onLogCallback(`--- ⚔️ UN NOUVEL ADVERSAIRE APPROCHE : ${this.enemy.name} (Niv. ${this.enemy.level}) ---`);
+    this.onUpdateUICallback();
+  }
+
+  executePotionTurn() {
+    if (this.player.usePotion()) {
+      this.onLogCallback(`🧪 ${this.player.name} boit une Potion et récupère des PV !`);
+      
+      // Sauvegarde le sac mis à jour
+      localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+      
+      // Riposte directe de l'ennemi (boire une potion consomme le tour !)
+      if (this.enemy.isAlive()) {
+        const enemyMove = this.enemy.moves[Math.floor(Math.random() * this.enemy.moves.length)];
+        this.executeMove(this.enemy, this.player, enemyMove);
+      }
+      
+      this.checkBattleStatus();
+      this.onUpdateUICallback();
+    } else {
+      this.onLogCallback(`⚠️ Impossible d'utiliser une potion (Sac vide ou PV déjà au max).`);
+    }
+  }
+}
+</file>
+
+<file path="src/main.ts">
+import { Character, Move } from './Character';
+import { Monster } from './Monster';
+import { CombatEngine } from './CombatEngine';
+import { UIManager } from './UIManager';
+import { Weapon, Armor, Equipment } from './Stuff';
+import { StoryManager } from './StoryManager';
+
+// 1. Définition des attaques/soins disponibles
+const defaultPlayerMoves: Move[] = [
+  { name: '👊 Charge', damage: 15, type: 'attack', accuracy: 95 },
+  { name: '🩹 Potion de Soin', damage: 30, type: 'heal', accuracy: 100 }
+];
+
+const enemyMoves: Move[] = [
+  { name: 'Morsure', damage: 12, type: 'attack', accuracy: 95 },
+  { name: 'Griffe', damage: 18, type: 'attack', accuracy: 85 },
+  { name: 'Régénération', damage: 20, type: 'heal', accuracy: 100 }
+];
+
+// 2. Création des combattants (Nom, MaxPV, Attaque, Vitesse, Capacités)
+const savedLevel = localStorage.getItem('rpg_player_level');
+const savedXp = localStorage.getItem('rpg_player_xp');
+const savedBaseHp = localStorage.getItem('rpg_player_base_hp');
+const savedBaseAtk = localStorage.getItem('rpg_player_base_atk');
+const savedBaseDef = localStorage.getItem('rpg_player_base_def');
+const savedMoves = localStorage.getItem('rpg_player_moves'); // NOUVEAU : Charge la liste d'attaques
+const savedWeapon = localStorage.getItem('rpg_player_weapon');
+const savedArmor = localStorage.getItem('rpg_player_armor');
+const savedBag = localStorage.getItem('rpg_player_bag');
+
+const initialLevel = savedLevel ? parseInt(savedLevel) : 1;
+const initialXp = savedXp ? parseInt(savedXp) : 0;
+const initialHp = savedBaseHp ? parseInt(savedBaseHp) : 100;   // 100 par défaut si 1ère partie
+const initialAtk = savedBaseAtk ? parseInt(savedBaseAtk) : 10; // 10 par défaut si 1ère partie
+const initialDef = savedBaseDef ? parseInt(savedBaseDef) : 5;  // 5 par défaut si 1ère partie
+const initialMoves: Move[] = savedMoves ? JSON.parse(savedMoves) : defaultPlayerMoves;
+
+let initialWeapon: Weapon | null = null;
+if (savedWeapon) {
+  try {
+    initialWeapon = JSON.parse(savedWeapon) as Weapon;
+  } catch (e) {
+    console.error("Erreur lors du chargement de l'arme :", e);
+    initialWeapon = null;
+  }
+}
+
+let initialArmor: Armor | null = null;
+if (savedArmor) {
+  try {
+    initialArmor = JSON.parse(savedArmor) as Armor;
+  } catch (e) {
+    console.error("Erreur lors du chargement de l'armure :", e);
+    initialArmor = null;
+  }
+}
+
+// Conversion sécurisée du sac à dos JSON
+let initialBag: Equipment[] = [];
+if (savedBag) {
+  try {
+    initialBag = JSON.parse(savedBag) as Equipment[];
+  } catch (e) {
+    console.error("Erreur lors du chargement du sac :", e);
+    initialBag = [];
+  }
+}
+
+// 2. Création des combattants avec les PV et l'ATK exacts issus de ses choix passés
+const hero = new Character(
+    'Kevin', 
+    initialHp, 
+    initialAtk, 
+    initialDef,
+    15, 
+    initialMoves,  
+    initialWeapon,
+    initialArmor,
+    initialBag,
+    initialLevel
+);
+hero.xp = initialXp;
+
+const enemy = new Monster('Brute Ennemie', 120, 8, 1, 10, enemyMoves);
+
+// 3. Initialisation des gestionnaires
+const ui = new UIManager();
+
+const storyManager = new StoryManager(
+  hero,
+  (scenario) => ui.showScenario(scenario),
+  (msg) => ui.addLog(msg),
+  (enemy) => {
+    // Démarrer un combat avec l'ennemi du scénario
+    engine.enemy = enemy;
+    ui.hideScenario();
+    ui.updateUI();
+  }
+);
+
+const engine = new CombatEngine(
+  hero,
+  enemy,
+  (msg) => ui.addLog(msg),    // Lien pour ajouter les messages
+  () => ui.updateUI()         // Lien pour rafraîchir les barres de vie
+);
+
+// Connecter le StoryManager au CombatEngine
+engine.setStoryManager(storyManager);
+
+// 4. Lancement du jeu
+ui.init(engine, (selectedMove) => {
+  engine.executeRound(selectedMove);
+}, storyManager);
+</file>
+
+<file path="src/UIManager.ts">
+import { CombatEngine } from './CombatEngine';
+import { Move } from './Character';
+import { getSkillForLevel } from './Skills';
+import { Weapon } from './Stuff';
+import { Scenario, Choice } from './Scenario';
+import { StoryManager } from './StoryManager';
+
+export class UIManager {
+  private engine!: CombatEngine;
+  private storyManager!: StoryManager;
+  private currentScenario: Scenario | null = null;
+  private isStoryMode: boolean = false;
+
+  init(engine: CombatEngine, onActionSelected: (move: Move) => void, storyManager: StoryManager) {
+    this.engine = engine;
+    this.storyManager = storyManager;
+    this.setupHTMLStructure();
+    this.renderButtons(onActionSelected);
+    this.setupBonusEvents();
+    this.updateUI();
+    
+    // Initialiser le premier scénario
+    this.showScenario(storyManager.getCurrentScenario());
+  }
+
+  private setupHTMLStructure() {
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    app.innerHTML = `
+      <div style="font-family: sans-serif; max-width: 500px; margin: 20px auto; border: 2px solid #333; padding: 20px; border-radius: 8px; background: #f9f9f9;">
+        <!-- Zone Infos Joueur -->
+        <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong id="p-level" style="color: #2196F3; font-size: 16px;">Niveau 1</strong>
+            <!-- ⚔️ On garde l'ID existant ou on utilise le nouveau pour ATK + DEF -->
+            <div id="p-stats" style="font-size: 11px; color: #555; margin-top: 2px;">
+              <span id="player-display-atk">ATK: 10</span> | <span id="player-display-def">DEF: 0</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 12px; color: #666;">XP:</span>
+            <div style="width: 120px; background: #eee; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
+              <div id="p-xp-bar" style="width: 0%; background: #2196F3; height: 100%; transition: width 0.3s;"></div>
+            </div>
+            <span id="p-xp-text" style="font-size: 12px; color: #666; min-width: 50px;">0/100</span>
+          </div>
+          <!-- 🛡️ Zone Équipements (Arme + Armure alignées verticalement) -->
+          <div style="display: flex; flex-direction: column; gap: 2px; text-align: right;">
+            <div>
+              <span id="player-weapon" style="font-size: 12px; color: #666; cursor: help;">⚔️ À mains nues</span>
+            </div>
+            <div>
+              <span id="player-armor" style="font-size: 12px; color: #666; cursor: help;">🛡️ Vêtements de civil</span>
+            </div>
+          </div>
+        </div> 
+
+        <!-- Zone Combat -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <h3 id="p-name" style="margin: 0 0 5px 0;">Joueur</h3>
+            <div style="width: 150px; background: #ddd; height: 15px; border-radius: 10px; overflow: hidden;">
+              <div id="p-bar" style="width: 100%; background: #4CAF50; height: 100%; transition: width 0.3s;"></div>
+            </div>
+            <span id="p-hp">100/100 PV</span>
+          </div>
+          <div style="text-align: right;">
+            <h3 id="e-name" style="margin: 0 0 5px 0;">Adversaire</h3>
+            <span style="font-size: 12px; color: #f44336; font-weight: bold;">Niv. <span id="e-level">1</span></span>
+            <div style="width: 150px; background: #ddd; height: 15px; border-radius: 10px; overflow: hidden; margin-top: 5px;">
+              <div id="e-bar" style="width: 100%; background: #4CAF50; height: 100%; transition: width 0.3s;"></div>
+            </div>
+            <span id="e-hp">100/100 PV</span>
+          </div>
+        </div>
+
+        <!-- Journal de combat -->
+        <div id="journal" style="height: 120px; overflow-y: auto; background: #222; color: #fff; padding: 10px; font-size: 14px; border-radius: 4px; margin-bottom: 20px; line-height: 1.4;">
+          Le combat commence ! Choisissez une action.
+        </div>
+
+        <!-- Panneau 1 : Boutons d'actions classiques -->
+        <div id="actions-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+        <div id="inventory-container" style="margin-top: 10px;">
+          <button id="use-potion-btn" style="width: 100%; padding: 10px; background: #9C27B0; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+            🎒 Utiliser Sac : Potion (Stock: <span id="potion-count">0</span>)
+          </button>
+        </div>
+        <div id="bag-container" style="margin-top: 15px; background: #ECEFF1; border: 1px solid #B0BEC5; padding: 12px; border-radius: 6px;">
+          <h4 style="margin: 0 0 8px 0; color: #37474F; display: flex; justify-content: space-between;">
+            <span>🎒 Contenu du Sac à dos</span>
+            <span id="bag-slots" style="font-size: 11px; color: #78909C;">0 objet</span>
+          </h4>
+          <!-- Liste dynamique des équipements stockés -->
+          <div id="bag-items-list" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12px; color: #90A4AE; font-style: italic;">Votre sac est vide d'équipements...</span>
+          </div>
+        </div>
+        
+        <!-- Panneau 2 : Choix du Bonus (Caché par défaut) -->
+        <div id="bonus-container" style="display: none; background: #FFF3E0; border: 1px solid #FFB74D; padding: 15px; border-radius: 6px; text-align: center; margin-top: 10px;">
+          <h4 style="margin: 0 0 10px 0; color: #E65100;">🎉 BONUS DE LEVEL UP ! 🎉</h4>
+          <p style="font-size: 13px; margin: 0 0 15px 0; color: #555;">Choisissez une amélioration permanente :</p>
+          <div style="display: flex; gap: 10px;">
+            <button id="bonus-hp-btn" style="flex: 1; padding: 10px; background: #E65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">❤️ Vitalité (+25 PV Max)</button>
+            <button id="bonus-atk-btn" style="flex: 1; padding: 10px; background: #E65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">⚔️ Force (+5 Attaque)</button>
+          </div>
+          <button id="bonus-skill-btn" style="display: none; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px;">📖 Apprendre un nouveau sort</button>
+        </div>
+        <!-- Panneau 3 : Bouton Prochain Match -->
+        <button id="next-combat-btn" style="display: none; width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;">
+          ⚔️ Commencer un Nouveau Combat
+        </button>
+
+        <!-- Outils Dev / Reset -->
+        <button id="reset-btn" style="margin-top: 25px; width: 100%; background: transparent; border: 1px dashed #aaa; color: #888; padding: 5px; cursor: pointer; font-size: 11px;">
+          🔄 Réinitialiser la sauvegarde (Niv. 1)
+        </button>
+      </div>
+    `;
+
+    document.getElementById('reset-btn')!.onclick = () => {
+      localStorage.clear();
+      localStorage.setItem('rpg_player_level', '1');
+      localStorage.setItem('rpg_player_xp', '0');
+      localStorage.setItem('rpg_player_base_hp', '100');
+      localStorage.setItem('rpg_player_base_atk', '10');
+      localStorage.removeItem('rpg_player_weapon'); // Supprime l'arme
+      localStorage.removeItem('rpg_player_armor'); // Supprime l'armure
+      localStorage.removeItem('rpg_player_moves');
+      localStorage.removeItem('rpg_player_bag');
+      window.location.reload();
+    };
+
+    document.getElementById('next-combat-btn')!.onclick = () => {
+      this.engine.startNewCombat();
+    };
+
+    document.getElementById('use-potion-btn')!.onclick = () => {
+      if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
+        this.engine.executePotionTurn();
+      }
+    };
+
+  }
+
+
+
+  // Connecte les clics des boutons de bonus aux fonctions de statistiques
+  private setupBonusEvents() {
+    document.getElementById('bonus-hp-btn')!.onclick = () => {
+      this.engine.player.applyHpBonus();
+      this.selectBonusFinished("En route pour la vitalité ! +25 PV Max.");
+    };
+
+    document.getElementById('bonus-atk-btn')!.onclick = () => {
+      this.engine.player.applyAttackBonus();
+      this.selectBonusFinished("La force brute augmente ! +5 Attaque.");
+    };
+
+    const skillBtn = document.getElementById('bonus-skill-btn')!;
+    skillBtn.onclick = () => {
+      const nextSkill = getSkillForLevel(this.engine.player.level);
+      if (nextSkill) {
+        this.engine.player.learnMove(nextSkill);
+
+        // Sauvegarde de la nouvelle liste d'attaques sous forme de texte JSON
+        localStorage.setItem('rpg_player_moves', JSON.stringify(this.engine.player.moves));
+
+        this.renderButtons((move) => this.engine.executeRound(move)); // Recrée les boutons de combat avec la nouvelle attaque
+        this.selectBonusFinished(`Nouveau sort appris : ${nextSkill.name} !`);
+      }
+    };
+  }
+
+  // Clôture le choix de bonus et repasse la main au bouton de combat suivant
+  private selectBonusFinished(logMessage: string) {
+    this.engine.isChoosingBonus = false;
+    this.addLog(`✨ **Bonus choisi** : ${logMessage}`);
+    
+    // On re-sauvegarde le changement de statistiques
+    localStorage.setItem('rpg_player_base_hp', this.engine.player.baseMaxHp.toString());
+    localStorage.setItem('rpg_player_base_atk', this.engine.player.baseAttack.toString());
+
+    this.updateUI();
+  }
+
+  renderButtons(onActionSelected: (move: Move) => void) {
+    const container = document.getElementById('actions-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    this.engine.player.moves.forEach(move => {
+      const btn = document.createElement('button');
+      btn.textContent = move.name;
+      btn.style.padding = '12px';
+      btn.style.cursor = 'pointer';
+      btn.style.fontWeight = 'bold';
+      container.appendChild(btn);
+      btn.onclick = () => onActionSelected(move);
+    });
+  }
+
+  updateUI() {
+    const pBar = document.getElementById('p-bar') as HTMLElement;
+    const eBar = document.getElementById('e-bar') as HTMLElement;
+    const pHp = document.getElementById('p-hp') as HTMLElement;
+    const eHp = document.getElementById('e-hp') as HTMLElement;
+    const pLevel = document.getElementById('p-level') as HTMLElement;
+    const eLevel = document.getElementById('e-level') as HTMLElement;
+    const pXpBar = document.getElementById('p-xp-bar') as HTMLElement;
+    const pXpText = document.getElementById('p-xp-text') as HTMLElement;
+    const pStatsText = document.getElementById('p-stats') as HTMLElement;
+    
+    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    const actionsContainer = document.getElementById('actions-container') as HTMLElement;
+    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
+
+    const baseAtk = this.engine.player.baseAttack;
+    const baseDef = this.engine.player.baseDefense;
+    const weaponBonus = this.engine.player.equippedWeapon ? this.engine.player.equippedWeapon.bonusAtk : 0;
+    const defenseBonus = this.engine.player.equippedArmor ? this.engine.player.equippedArmor.bonusDef : 0;
+
+    // Mise à jour des textes basiques
+    document.getElementById('p-name')!.textContent = this.engine.player.name;
+    document.getElementById('e-name')!.textContent = this.engine.enemy.name;
+    pLevel.textContent = `⭐ Niveau ${this.engine.player.level}`;
+    pStatsText.textContent = `ATK: ${baseAtk + weaponBonus} | DEF: ${baseDef + defenseBonus} | PV Max: ${this.engine.player.maxHp}`;
+
+    const pWeaponText = document.getElementById('player-weapon')!;
+    
+    if (pWeaponText) {
+      if (this.engine.player.equippedWeapon) {
+        const weapon = this.engine.player.equippedWeapon;
+        pWeaponText.textContent = `⚔️ ${weapon.name} [${weapon.rarity.toUpperCase()}]`;
+        pWeaponText.title = weapon.description;
+      } else {
+        pWeaponText.textContent = `✋ À mains nues`;
+        pWeaponText.title = "Vous n'avez pas d'arme équipée.";
+      }
+    }
+
+    const pArmorText = document.getElementById('player-armor')!;
+    
+    if (pArmorText) {
+      if (this.engine.player.equippedArmor) {
+        const armor = this.engine.player.equippedArmor;
+        pArmorText.textContent = `🛡️ ${armor.name} [${armor.rarity.toUpperCase()}]`;
+        pArmorText.title = armor.description;
+      } else {
+        pArmorText.textContent = `🛡️ Vêtements de civil`;
+        pArmorText.title = "Vous n'avez pas d'armure équipée.";
+      }
+    }
+
+    eLevel.textContent = this.engine.enemy.level.toString();
+
+    // Calculs de l'XP
+    const xpNeeded = this.engine.player.getXpNeededForNextLevel();
+    pXpBar.style.width = `${(this.engine.player.xp / xpNeeded) * 100}%`;
+    pXpText.textContent = `${this.engine.player.xp}/${xpNeeded}`;
+
+    // Calculs des PV
+    const pPct = (this.engine.player.hp / this.engine.player.maxHp) * 100;
+    const ePct = (this.engine.enemy.hp / this.engine.enemy.maxHp) * 100;
+    pBar.style.width = `${pPct}%`;
+    eBar.style.width = `${ePct}%`;
+    
+    pHp.textContent = `${this.engine.player.hp}/${this.engine.player.maxHp} PV`;
+    eHp.textContent = `${this.engine.enemy.hp}/${this.engine.enemy.maxHp} PV`;
+
+    // Met à jour le compteur de potions
+    const potionCountSpan = document.getElementById('potion-count')!;
+    const invContainer = document.getElementById('inventory-container')!;
+    potionCountSpan.textContent = this.engine.player.inventory.potions.toString();
+
+
+    // 🔀 LOGIQUE D'AFFICHAGE DES PANNEAUX
+    if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
+      // 1. Le combat est en cours
+      actionsContainer.style.display = 'grid';
+      invContainer.style.display = 'block';
+      bonusContainer.style.display = 'none';
+      nextCombatBtn.style.display = 'none';
+    } else {
+      // 2. Quelqu'un est K.O. : on coupe toujours les boutons d'attaques
+      actionsContainer.style.display = 'none';
+      invContainer.style.display = 'none';
+
+      if (this.engine.isChoosingBonus) {
+        // En attente d'un choix de niveau : on affiche uniquement le panneau orange
+        bonusContainer.style.display = 'block';
+        nextCombatBtn.style.display = 'none';
+
+        // Regarde si le niveau débloque une compétence
+        const availableSkill = getSkillForLevel(this.engine.player.level);
+        const skillBtn = document.getElementById('bonus-skill-btn') as HTMLElement;
+        
+        if (availableSkill) {
+          skillBtn.style.display = 'block';
+          skillBtn.textContent = `📖 Apprendre ${availableSkill.name} (Dégâts: ${availableSkill.damage})`;
+        } else {
+          skillBtn.style.display = 'none';
+        }
+      } else {
+        // Pas de bonus en attente (ou bonus déjà choisi) : on montre le bouton vert du match suivant !
+        bonusContainer.style.display = 'none';
+        nextCombatBtn.style.display = 'block';
+      }
+    }
+
+    // --- GESTION ET RENDU DU SAC À DOS ---
+    const bagSlots = document.getElementById('bag-slots')!;
+    const bagItemsList = document.getElementById('bag-items-list')!;
+    const player = this.engine.player;
+    const items = player.inventory.items;
+
+    bagSlots.textContent = `${items.length} / ${player.MAX_BAG_SLOTS} objet${items.length > 1 ? 's' : ''}`;
+
+    if (items.length >= player.MAX_BAG_SLOTS) {
+      bagSlots.style.color = '#D32F2F';
+      bagSlots.style.fontWeight = 'bold';
+    } else {
+      bagSlots.style.color = '#78909C';
+      bagSlots.style.fontWeight = 'normal';
+    }
+
+    if (items.length === 0) {
+      bagItemsList.innerHTML = `<span style="font-size: 12px; color: #90A4AE; font-style: italic; text-align: center; padding: 5px;">Votre sac est vide d'équipements...</span>`;
+    } else {
+      bagItemsList.innerHTML = ''; 
+      
+      items.forEach((item) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: white; padding: 6px 10px; border-radius: 4px; border-left: 4px solid #888; font-size: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
+        
+        if (item.rarity === 'rare') itemDiv.style.borderLeftColor = '#2196F3';
+        if (item.rarity === 'epic') itemDiv.style.borderLeftColor = '#9C27B0';
+        if (item.rarity === 'legendary') itemDiv.style.borderLeftColor = '#FF9800';
+
+        let bonusText = '';
+        if (item.type === 'weapon') {
+          bonusText = `+${item.bonusAtk} ATK`;
+        } else if (item.type === 'armor') {
+          bonusText = `+${item.bonusDef} DEF`;
+        }
+
+        const infoSpan = document.createElement('span');
+        infoSpan.innerHTML = `<strong>${item.name}</strong> <span style="color:#666; font-size:10px;">(${bonusText})</span>`;
+        infoSpan.title = item.description;
+        itemDiv.appendChild(infoSpan);
+
+        // Conteneur pour grouper nos deux boutons à droite
+        const actionGroup = document.createElement('div');
+        actionGroup.style.cssText = "display: flex; gap: 4px;";
+
+        // ⚔️ 1. Bouton Équiper
+        const equipBtn = document.createElement('button');
+        equipBtn.textContent = "Équiper";
+        equipBtn.style.cssText = "padding: 3px 8px; background: #37474F; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: bold;";
+        equipBtn.onclick = () => {
+          if (item.type === 'weapon') {
+            player.equipWeaponFromBag(item.id);
+            localStorage.setItem('rpg_player_weapon', JSON.stringify(player.equippedWeapon));
+          } else if (item.type === 'armor') {
+            player.equipArmorFromBag(item.id);
+            localStorage.setItem('rpg_player_armor', JSON.stringify(player.equippedArmor));
+          }
+          
+          // On sauvegarde le sac mis à jour (l'objet équipé en est sorti)
+          localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
+          this.engine.onLogCallback(`🔧 Vous avez équipé : **${item.name}**`);
+          this.updateUI();
+        };
+
+        actionGroup.appendChild(equipBtn);
+
+        // 🗑️ 2. Bouton Jeter (Le nouveau venu !)
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = "🗑️";
+        deleteBtn.style.cssText = "padding: 3px 6px; background: #EF5350; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;";
+        deleteBtn.title = "Détruire définitivement cet objet";
+        deleteBtn.onclick = () => {
+          // Demande une petite confirmation rapide pour éviter les missclicks dramatiques
+          if (confirm(`Voulez-vous vraiment jeter votre "${item.name}" ? Il sera définitivement perdu.`)) {
+            player.removeItemFromBag(item.id);
+            localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
+            this.engine.onLogCallback(`🗑️ Objet détruit : **${item.name}** a été retiré de votre sac.`);
+            this.updateUI(); // Rafraîchit l'affichage
+          }
+        };
+        actionGroup.appendChild(deleteBtn);
+
+        itemDiv.appendChild(actionGroup);
+        bagItemsList.appendChild(itemDiv);
+      });
+    }
+  }
+
+  addLog(message: string) {
+    const journal = document.getElementById('journal');
+    if (!journal) return;
+    journal.innerHTML += `<br>${message}`;
+    journal.scrollTop = journal.scrollHeight;
+  }
+
+  showScenario(scenario: Scenario) {
+    this.currentScenario = scenario;
+    this.isStoryMode = true;
+    
+    const container = document.getElementById('actions-container') as HTMLElement;
+    const invContainer = document.getElementById('inventory-container') as HTMLElement;
+    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
+    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    
+    if (!container) return;
+    
+    // Masquer les éléments de combat
+    container.style.display = 'none';
+    invContainer.style.display = 'none';
+    bonusContainer.style.display = 'none';
+    if (nextCombatBtn) {
+      nextCombatBtn.style.display = 'none';
+      (nextCombatBtn as HTMLButtonElement).disabled = true;
+    }
+    
+    // Afficher le panneau de scénario
+    let scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
+    if (!scenarioPanel) {
+      scenarioPanel = document.createElement('div');
+      scenarioPanel.id = 'scenario-panel';
+      document.getElementById('app')?.appendChild(scenarioPanel);
+    }
+    
+    scenarioPanel.style.display = 'block';
+    
+    // Style spécial pour les scénarios de mort
+    const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
+    
+    // Vérifier si le joueur a des potions
+    const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
+    
+    if (isDeathScenario) {
+      scenarioPanel.style.cssText = 'background: #FFEBEE; border: 3px solid #D32F2F; padding: 20px; border-radius: 8px; margin-top: 15px; text-align: center;';
+      scenarioPanel.innerHTML = `
+        <h2 style="margin: 0 0 15px 0; color: #D32F2F; font-size: 24px;">💀 ${scenario.title}</h2>
+        <p style="margin: 0 0 20px 0; color: #424242; line-height: 1.6; font-size: 16px;">${scenario.description}</p>
+        <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 10px; align-items: center;"></div>
+      `;
+    } else {
+      scenarioPanel.style.cssText = 'background: #E3F2FD; border: 2px solid #2196F3; padding: 15px; border-radius: 8px; margin-top: 15px;';
+      scenarioPanel.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; color: #1565C0;">📖 ${scenario.title}</h3>
+        <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5;">${scenario.description}</p>
+        <div id="potion-button-container" style="margin-bottom: 15px;"></div>
+        <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      `;
+      
+      // Ajouter le bouton de potion
+      const potionContainer = document.getElementById('potion-button-container')!;
+      const potionBtn = document.createElement('button');
+      potionBtn.textContent = '🧪 Utiliser une Potion';
+      
+      if (!hasPotion) {
+        potionBtn.style.cssText = 'padding: 10px 20px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; opacity: 0.6;';
+      } else {
+        potionBtn.style.cssText = 'padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;';
+        potionBtn.onmouseover = () => potionBtn.style.background = '#388E3C';
+        potionBtn.onmouseout = () => potionBtn.style.background = '#4CAF50';
+        potionBtn.onclick = () => {
+          if (this.storyManager.usePotion()) {
+            this.addLog('🧪 Vous utilisez une potion et récupérez des PV !');
+            this.updateUI();
+            // Rafraîchir le scénario pour mettre à jour l'état du bouton
+            this.showScenario(scenario);
+          }
+        };
+      }
+      
+      potionContainer.appendChild(potionBtn);
+    }
+    
+    const choicesContainer = document.getElementById('scenario-choices')!;
+    scenario.choices.forEach(choice => {
+      const choiceBtn = document.createElement('button');
+      choiceBtn.textContent = choice.text;
+      
+      // Vérifier si le choix est disponible
+      const canMakeChoice = this.storyManager.canMakeChoice(choice);
+      
+      if (isDeathScenario) {
+        choiceBtn.style.cssText = 'padding: 15px 30px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; min-width: 200px;';
+        choiceBtn.onmouseover = () => choiceBtn.style.background = '#B71C1C';
+        choiceBtn.onmouseout = () => choiceBtn.style.background = '#D32F2F';
+      } else {
+        if (!canMakeChoice) {
+          choiceBtn.style.cssText = 'padding: 12px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; text-align: left; opacity: 0.6;';
+        } else {
+          choiceBtn.style.cssText = 'padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left;';
+          choiceBtn.onmouseover = () => choiceBtn.style.background = '#1976D2';
+          choiceBtn.onmouseout = () => choiceBtn.style.background = '#2196F3';
+        }
+      }
+      
+      if (canMakeChoice) {
+        choiceBtn.onclick = () => {
+          this.storyManager.makeChoice(choice.id);
+        };
+      }
+      choicesContainer.appendChild(choiceBtn);
+    });
+    
+    this.addLog(`📖 **${scenario.title}** : ${scenario.description}`);
+  }
+
+  hideScenario() {
+    this.isStoryMode = false;
+    const scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
+    if (scenarioPanel) {
+      scenarioPanel.style.display = 'none';
+    }
+    
+    // Réactiver les éléments de combat
+    const container = document.getElementById('actions-container') as HTMLElement;
+    const invContainer = document.getElementById('inventory-container') as HTMLElement;
+    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
+    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    
+    container.style.display = 'block';
+    invContainer.style.display = 'block';
+    bonusContainer.style.display = 'block';
+    if (nextCombatBtn) {
+      nextCombatBtn.style.display = 'block';
+      (nextCombatBtn as HTMLButtonElement).disabled = false;
+    }
+  }
+}
+</file>
+
+</files>

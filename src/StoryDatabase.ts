@@ -267,7 +267,8 @@ export const STORY_DATABASE: ScenarioMap = {
         id: 'offer_item',
         text: '🎁 Offrir un objet de votre inventaire',
         consequence: {
-          type: 'story',
+          type: 'offer',
+          requiredItemType: 'any',
           description: 'Le dragonnet accepte votre offrande et vous laisse passer.',
           nextScenarioId: 'summit'
         }
@@ -338,11 +339,12 @@ export const STORY_DATABASE: ScenarioMap = {
     description: 'Vous avez survécu à cette première épreuve. Mais le monde est vaste et les dangers nombreux. Votre légende ne fait que commencer...',
     choices: [
       {
-        id: 'restart',
-        text: '🔄 Recommencer une nouvelle aventure',
+        id: 'rest_and_restart',
+        text: '🔄 Se reposer et recommencer une nouvelle aventure',
         consequence: {
-          type: 'death',
-          description: 'Votre histoire se termine ici. Une nouvelle légende peut commencer.',
+          type: 'heal',
+          value: 9999,
+          description: 'Vous vous reposez et récupérez toutes vos forces. Une nouvelle légende peut commencer.',
           nextScenarioId: 'intro'
         }
       }

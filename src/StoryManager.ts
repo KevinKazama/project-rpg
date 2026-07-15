@@ -4,6 +4,7 @@ import { STORY_DATABASE } from './StoryDatabase';
 import { getRandomMonster, getMonsterByType } from './Bestiary';
 import { Monster } from './Monster';
 import { getRandomEquipmentLoot } from './Stuff';
+import { Equipment } from './Stuff';
 
 export class StoryManager {
   private currentScenarioId: string;
@@ -38,7 +39,67 @@ export class StoryManager {
       return;
     }
 
+    // Vérifier si le choix est disponible (offrande avec objet requis)
+    if (choice.consequence.type === 'offer' && !this.canMakeChoice(choice)) {
+      this.onLog(`⚠️ **Impossible** : Vous n'avez pas l'objet requis.`);
+      return;
+    }
+
     this.applyConsequence(choice.consequence);
+  }
+
+  canMakeChoice(choice: Choice): boolean {
+    const consequence = choice.consequence;
+    
+    if (consequence.type === 'offer' && consequence.requiredItemType) {
+      return this.hasRequiredItem(consequence.requiredItemType, consequence.requiredItemRarity);
+    }
+    
+    return true;
+  }
+
+  private hasRequiredItem(itemType: string, rarity?: string): boolean {
+    if (itemType === 'potion') {
+      return this.player.inventory.items.some(item => item.type === 'potion');
+    }
+    
+    if (itemType === 'weapon' || itemType === 'armor' || itemType === 'any') {
+      const items = this.player.inventory.items;
+      if (items.length === 0) return false;
+      
+      if (!rarity) return items.length > 0;
+      
+      return items.some(item => 
+        (itemType === 'any' || item.type === itemType) && 
+        item.rarity === rarity
+      );
+    }
+    
+    return false;
+  }
+
+  private consumeRequiredItem(itemType: string, rarity?: string): void {
+    if (itemType === 'potion') {
+      const potionIndex = this.player.inventory.items.findIndex(item => item.type === 'potion');
+      if (potionIndex !== -1) {
+        this.player.inventory.items.splice(potionIndex, 1);
+        this.onLog(`🧪 **Offrande** : -1 Potion`);
+      }
+      return;
+    }
+    
+    if (itemType === 'weapon' || itemType === 'armor' || itemType === 'any') {
+      const items = this.player.inventory.items;
+      const itemIndex = items.findIndex(item => 
+        (itemType === 'any' || item.type === itemType) && 
+        (!rarity || item.rarity === rarity)
+      );
+      
+      if (itemIndex !== -1) {
+        const removedItem = items.splice(itemIndex, 1)[0];
+        this.onLog(`🎁 **Offrande** : ${removedItem.name} sacrifié.`);
+      }
+    }
   }
 
   private applyConsequence(consequence: ScenarioConsequence): void {
@@ -60,6 +121,9 @@ export class StoryManager {
         break;
       case 'death':
         this.handleDeath(consequence);
+        break;
+      case 'offer':
+        this.handleOffer(consequence);
         break;
     }
   }
@@ -144,6 +208,19 @@ export class StoryManager {
     this.triggerPermadeath();
   }
 
+  private handleOffer(consequence: ScenarioConsequence): void {
+    const itemType = consequence.requiredItemType || 'any';
+    const rarity = consequence.requiredItemRarity;
+    
+    this.consumeRequiredItem(itemType, rarity);
+    
+    if (consequence.description) {
+      this.onLog(`📖 ${consequence.description}`);
+    }
+    
+    this.transitionToNextScenario(consequence.nextScenarioId);
+  }
+
   private transitionToNextScenario(nextScenarioId?: string): void {
     if (nextScenarioId) {
       this.currentScenarioId = nextScenarioId;
@@ -191,5 +268,9 @@ export class StoryManager {
   resetStory(): void {
     this.currentScenarioId = 'intro';
     this.onScenarioChange(this.getCurrentScenario());
+  }
+
+  usePotion(): boolean {
+    return this.player.usePotion();
   }
 }
