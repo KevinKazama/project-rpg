@@ -523,9 +523,13 @@ export class UIManager {
           
           // 2. On récupère le nouveau scénario généré
           const nextScenario = this.storyManager.getCurrentScenario();
+          if (nextScenario.choices.some(c => c.consequence.type === 'combat')) {
+            this.hideScenario();  // ✅ APPEL CRUCIAL !
+            this.isStoryMode = false;
+          } else {
+            this.showScenario(nextScenario);
+          }
           
-          // 3. On l'affiche à l'écran
-          this.showScenario(nextScenario);
           
           // 4. On rafraîchit toute l'interface (ce qui met à jour le sac à dos visuellement)
           this.updateUI();
