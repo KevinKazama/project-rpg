@@ -8,6 +8,7 @@ import { Equipment } from './Stuff';
 
 export class StoryManager {
   private currentScenarioId: string;
+  private pendingScenarioId: string | null = null; // Scénario suivant après combat
   private player: Character;
   private onScenarioChange: (scenario: Scenario) => void;
   private onLog: (message: string) => void;
@@ -161,10 +162,11 @@ export class StoryManager {
     }
     
     this.onLog(`⚔️ **COMBAT** : ${consequence.description}`);
-    this.onCombatStart(enemy);
     
-    // Note: Le scénario suivant sera déterminé après le combat
-    this.currentScenarioId = consequence.nextScenarioId || 'intro';
+    // Stocker le scénario suivant pour après le combat
+    this.pendingScenarioId = consequence.nextScenarioId || 'intro';
+    
+    this.onCombatStart(enemy);
   }
 
   private handleReward(consequence: ScenarioConsequence): void {
@@ -264,6 +266,15 @@ export class StoryManager {
   }
 
   onCombatVictory(): void {
+    console.log('[StoryManager] onCombatVictory appelé');
+    
+    // Utiliser le scénario suivant stocké
+    if (this.pendingScenarioId) {
+      console.log('[StoryManager] Passage au scénario suivant:', this.pendingScenarioId);
+      this.currentScenarioId = this.pendingScenarioId;
+      this.pendingScenarioId = null;
+    }
+    
     const scenario = this.getCurrentScenario();
     const currentChoice = scenario.choices.find(c => c.consequence.type === 'combat');
     
@@ -278,11 +289,13 @@ export class StoryManager {
       this.onLog(`🆙 **LEVEL UP !** Niveau ${this.player.level} !`);
     }
     
-    // Transition au scénario suivant
-    this.transitionToNextScenario(currentChoice?.consequence.nextScenarioId);
+    // Afficher le scénario suivant
+    this.onScenarioChange(this.getCurrentScenario());
+    console.log('[StoryManager] Scénario suivant affiché');
   }
 
   onCombatDefeat(): void {
+    console.log('[StoryManager] onCombatDefeat appelé');
     this.currentScenarioId = 'death_combat';
     this.onScenarioChange(this.getCurrentScenario());
   }

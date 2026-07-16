@@ -17,22 +17,22 @@ const enemyMoves: Move[] = [
   { name: 'Régénération', damage: 20, type: 'heal', accuracy: 100 }
 ];
 
-// 2. Création des combattants (Nom, MaxPV, Attaque, Vitesse, Capacités)
+// 2. Récupération des données sauvegardées
 const savedLevel = localStorage.getItem('rpg_player_level');
 const savedXp = localStorage.getItem('rpg_player_xp');
 const savedBaseHp = localStorage.getItem('rpg_player_base_hp');
 const savedBaseAtk = localStorage.getItem('rpg_player_base_atk');
 const savedBaseDef = localStorage.getItem('rpg_player_base_def');
-const savedMoves = localStorage.getItem('rpg_player_moves'); // NOUVEAU : Charge la liste d'attaques
+const savedMoves = localStorage.getItem('rpg_player_moves');
 const savedWeapon = localStorage.getItem('rpg_player_weapon');
 const savedArmor = localStorage.getItem('rpg_player_armor');
 const savedBag = localStorage.getItem('rpg_player_bag');
 
 const initialLevel = savedLevel ? parseInt(savedLevel) : 1;
 const initialXp = savedXp ? parseInt(savedXp) : 0;
-const initialHp = savedBaseHp ? parseInt(savedBaseHp) : 100;   // 100 par défaut si 1ère partie
-const initialAtk = savedBaseAtk ? parseInt(savedBaseAtk) : 10; // 10 par défaut si 1ère partie
-const initialDef = savedBaseDef ? parseInt(savedBaseDef) : 5;  // 5 par défaut si 1ère partie
+const initialHp = savedBaseHp ? parseInt(savedBaseHp) : 100;   
+const initialAtk = savedBaseAtk ? parseInt(savedBaseAtk) : 10; 
+const initialDef = savedBaseDef ? parseInt(savedBaseDef) : 5;  
 const initialMoves: Move[] = savedMoves ? JSON.parse(savedMoves) : defaultPlayerMoves;
 
 let initialWeapon: Weapon | null = null;
@@ -55,7 +55,6 @@ if (savedArmor) {
   }
 }
 
-// Conversion sécurisée du sac à dos JSON
 let initialBag: Equipment[] = [];
 if (savedBag) {
   try {
@@ -66,7 +65,7 @@ if (savedBag) {
   }
 }
 
-// 2. Création des combattants avec les PV et l'ATK exacts issus de ses choix passés
+// 3. Création des combattants
 const hero = new Character(
     'Kevin', 
     initialHp, 
@@ -83,35 +82,41 @@ hero.xp = initialXp;
 
 const enemy = new Monster('Brute Ennemie', 120, 8, 1, 10, enemyMoves);
 
-// 3. Initialisation des gestionnaires
+// 4. Déclaration et instanciation sans conflit
 const ui = new UIManager();
 
+// Déclarer les variables let afin qu'elles soient disponibles dans la portée de la closure
 let storyManager: StoryManager;
 let engine: CombatEngine;
 
+// Instanciation de StoryManager (qui capture par référence la variable let "engine")
 storyManager = new StoryManager(
   hero,
   (scenario) => ui.showScenario(scenario),
   (msg) => ui.addLog(msg),
-  (enemy) => {
-    // Démarrer un combat avec l'ennemi du scénario
-    engine.enemy = enemy;
+  (newEnemy) => {
+    // "engine" est désormais bien défini lorsque cet événement de combat survient
+    engine.enemy = newEnemy;
+    // S'assurer que l'ennemi a ses PV max
+    engine.enemy.hp = engine.enemy.maxHp;
     ui.hideScenario();
+    ui.addLog(`⚔️ Combat contre ${newEnemy.name} (Niv. ${newEnemy.level}) lancé !`);
     ui.updateUI();
   }
 );
 
+// Instanciation de CombatEngine
 engine = new CombatEngine(
   hero,
   enemy,
-  (msg) => ui.addLog(msg),    // Lien pour ajouter les messages
-  () => ui.updateUI()         // Lien pour rafraîchir les barres de vie
+  (msg) => ui.addLog(msg),    
+  () => ui.updateUI()         
 );
 
-// Connecter le StoryManager au CombatEngine
+// Connexion réciproque du StoryManager au CombatEngine
 engine.setStoryManager(storyManager);
 
-// 4. Lancement du jeu
+// 5. Lancement de l'UI et du jeu
 ui.init(engine, (selectedMove) => {
   engine.executeRound(selectedMove);
 }, storyManager);

@@ -321,135 +321,6 @@ export interface Scenario {
 export type ScenarioMap = Record<string, Scenario>;
 </file>
 
-<file path="src/Stuff.ts">
-export type EquipmentType = 'weapon' | 'armor' | 'potion';
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
-
-export interface BaseEquipment {
-  id: string;
-  name: string;
-  type: EquipmentType;
-  rarity: Rarity;
-  levelRequired: number;
-  description: string;
-}
-
-export interface Weapon extends BaseEquipment {
-  type: 'weapon';
-  bonusAtk: number;
-}
-
-export interface Armor extends BaseEquipment {
-  type: 'armor';
-  bonusDef: number;
-}
-
-export interface Potion extends BaseEquipment {
-  type: 'potion';
-  healAmount: number;
-}
-
-export type Equipment = Weapon | Armor | Potion;
-
-// 📖 LE DICTIONNAIRE COMPLET DU JEU
-export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[]; potions: Potion[] } = {
-  weapons: [
-    // --- NIVEAU 1 ---
-    { id: 'w_rust_dagger', name: 'Dague Rouillée', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 3, description: 'Mieux que rien, mais attention au tétanos.' },
-    { id: 'w_wooden_staff', name: 'Bâton d\'Initié', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 4, description: 'Un morceau de bois solidifié par la magie.' },
-    { id: 'w_iron_sword', name: 'Épée en Fer court', type: 'weapon', rarity: 'rare', levelRequired: 1, bonusAtk: 7, description: 'Une lame standard forgée pour les recrues.' },
-    
-    // --- NIVEAU 2 à 3 ---
-    { id: 'w_steel_mace', name: 'Masse en Acier', type: 'weapon', rarity: 'common', levelRequired: 2, bonusAtk: 10, description: 'Lourde et parfaite pour briser des os.' },
-    { id: 'w_ranger_bow', name: 'Arc de Chasseur', type: 'weapon', rarity: 'rare', levelRequired: 2, bonusAtk: 14, description: 'Un arc en bois d\'if d\'une grande précision.' },
-    { id: 'w_shadow_blade', name: 'Lame des Ombres', type: 'weapon', rarity: 'epic', levelRequired: 3, bonusAtk: 22, description: 'Une dague obscure qui semble absorber la lumière ambiante.' },
-
-    // --- NIVEAU 4 à 5 ---
-    { id: 'w_paladin_greatsword', name: 'Espadon de Justice', type: 'weapon', rarity: 'rare', levelRequired: 4, bonusAtk: 28, description: 'Une épée à deux mains bénie par les anciens.' },
-    { id: 'w_lava_axe', name: 'Hache de Magma', type: 'weapon', rarity: 'epic', levelRequired: 5, bonusAtk: 38, description: 'Forgée au cœur d\'un volcan, elle irradie de chaleur.' },
-    
-    // --- ENDGAME / LEGENDARY ---
-    { id: 'w_excalibur', name: 'Excalibur', type: 'weapon', rarity: 'legendary', levelRequired: 5, bonusAtk: 55, description: 'La lame mythique des rois. Sa puissance est sans limite.' }
-  ],
-  armors: [
-    // --- NIVEAU 1 ---
-    { id: 'a_ragged_clothes', name: 'Habits Déchirés', type: 'armor', rarity: 'common', levelRequired: 1, bonusDef: 2, description: 'Protège à peine du vent.' },
-    { id: 'a_leather_vest', name: 'Veste en Cuir', type: 'armor', rarity: 'rare', levelRequired: 1, bonusDef: 5, description: 'Souple et renforcée aux endroits critiques.' },
-    
-    // --- NIVEAU 2 à 3 ---
-    { id: 'a_chainmail', name: 'Cotte de Mailles', type: 'armor', rarity: 'common', levelRequired: 2, bonusDef: 10, description: 'Un assemblage de milliers d\'anneaux de fer.' },
-    { id: 'a_steel_breastplate', name: 'Plastron en Acier', type: 'armor', rarity: 'rare', levelRequired: 3, bonusDef: 18, description: 'Une armure lourde polie comme un miroir.' },
-
-    // --- NIVEAU 4 à 5 ---
-    { id: 'a_dragon_scale', name: 'Armure en Écailles de Dragon', type: 'armor', rarity: 'epic', levelRequired: 4, bonusDef: 30, description: 'Aussi légère que de la soie, aussi dure que le diamant.' },
-    { id: 'a_immortal_plate', name: 'Égide de l\'Immortel', type: 'armor', rarity: 'legendary', levelRequired: 5, bonusDef: 45, description: 'Une armure divine qui repousse le destin lui-même.' }
-  ],
-  potions: [
-    { id: 'p_health_small', name: 'Potion de Soin Mineure', type: 'potion', rarity: 'common', levelRequired: 1, healAmount: 30, description: 'Une petite fiole de liquide rouge. Guérit 30 PV.' },
-    { id: 'p_health_medium', name: 'Potion de Soin', type: 'potion', rarity: 'rare', levelRequired: 2, healAmount: 50, description: 'Un flacon standard de potion de soin. Guérit 50 PV.' },
-    { id: 'p_health_large', name: 'Potion de Soin Majeure', type: 'potion', rarity: 'epic', levelRequired: 4, healAmount: 80, description: 'Une potion puissante distillée par les alchimistes. Guérit 80 PV.' },
-    { id: 'p_health_ultimate', name: 'Élixir de Vie', type: 'potion', rarity: 'legendary', levelRequired: 5, healAmount: 100, description: 'Un élixir légendaire qui restaure la vitalité. Guérit 100 PV.' }
-  ]
-};
-
-export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
-  // 1. On détermine d'abord la rareté cible (Probabilités)
-  const randRarity = Math.random() * 100;
-  let targetRarity: 'common' | 'rare' | 'epic' | 'legendary' = 'common';
-
-  if (randRarity < 60) targetRarity = 'common';
-  else if (randRarity < 85) targetRarity = 'rare';
-  else if (randRarity < 97) targetRarity = 'epic';
-  else targetRarity = 'legendary';
-
-  // 2. On choisit le type d'objet : 40% Arme, 40% Armure, 20% Potion
-  const randType = Math.random() * 100;
-  let itemType: 'weapons' | 'armors' | 'potions';
-  
-  if (randType < 40) itemType = 'weapons';
-  else if (randType < 80) itemType = 'armors';
-  else itemType = 'potions';
-
-  // 3. On filtre la base de données selon le type, le niveau et la rareté
-  let validItems = ITEM_DATABASE[itemType].filter(
-    (item: any) => item.levelRequired <= enemyLevel && item.rarity === targetRarity
-  );
-
-  // 🛡️ Sécurité 1 : Si la rareté précise n'existe pas pour ce niveau, on prend tout ce qui matche le niveau dans cette catégorie
-  if (validItems.length === 0) {
-    validItems = ITEM_DATABASE[itemType].filter((item: any) => item.levelRequired <= enemyLevel);
-  }
-
-  // 🛡️ Sécurité 2 : Si la catégorie entière est vide, on se rabat sur les armes par défaut
-  if (validItems.length === 0) {
-    validItems = ITEM_DATABASE.weapons.filter(w => w.levelRequired <= enemyLevel);
-  }
-
-  if (validItems.length === 0) return null;
-
-  // 4. On pioche un objet au hasard et on lui donne un ID unique pour le sac
-  const randomIndex = Math.floor(Math.random() * validItems.length);
-  const selectedTemplate = validItems[randomIndex];
-
-  return {
-    ...selectedTemplate,
-    id: Math.random().toString(36).substring(2, 11)
-  };
-}
-
-export function createPotion(healAmount: number = 40): Potion {
-  return {
-    id: Math.random().toString(36).substring(2, 11),
-    name: 'Potion de Soin',
-    type: 'potion',
-    rarity: 'common',
-    levelRequired: 1,
-    healAmount: healAmount,
-    description: 'Une potion de soin standard.'
-  };
-}
-</file>
-
 <file path="src/Character.ts">
 import { Weapon, Armor, Equipment, Potion, createPotion } from './Stuff';
 
@@ -704,123 +575,6 @@ export class Character implements Combatant {
   }
 
 }
-</file>
-
-<file path="src/main.ts">
-import { Character, Move } from './Character';
-import { Monster } from './Monster';
-import { CombatEngine } from './CombatEngine';
-import { UIManager } from './UIManager';
-import { Weapon, Armor, Equipment } from './Stuff';
-import { StoryManager } from './StoryManager';
-
-// 1. Définition des attaques/soins disponibles
-const defaultPlayerMoves: Move[] = [
-  { name: '👊 Charge', damage: 15, type: 'attack', accuracy: 95 },
-  { name: '🩹 Potion de Soin', damage: 30, type: 'heal', accuracy: 100 }
-];
-
-const enemyMoves: Move[] = [
-  { name: 'Morsure', damage: 12, type: 'attack', accuracy: 95 },
-  { name: 'Griffe', damage: 18, type: 'attack', accuracy: 85 },
-  { name: 'Régénération', damage: 20, type: 'heal', accuracy: 100 }
-];
-
-// 2. Création des combattants (Nom, MaxPV, Attaque, Vitesse, Capacités)
-const savedLevel = localStorage.getItem('rpg_player_level');
-const savedXp = localStorage.getItem('rpg_player_xp');
-const savedBaseHp = localStorage.getItem('rpg_player_base_hp');
-const savedBaseAtk = localStorage.getItem('rpg_player_base_atk');
-const savedBaseDef = localStorage.getItem('rpg_player_base_def');
-const savedMoves = localStorage.getItem('rpg_player_moves'); // NOUVEAU : Charge la liste d'attaques
-const savedWeapon = localStorage.getItem('rpg_player_weapon');
-const savedArmor = localStorage.getItem('rpg_player_armor');
-const savedBag = localStorage.getItem('rpg_player_bag');
-
-const initialLevel = savedLevel ? parseInt(savedLevel) : 1;
-const initialXp = savedXp ? parseInt(savedXp) : 0;
-const initialHp = savedBaseHp ? parseInt(savedBaseHp) : 100;   // 100 par défaut si 1ère partie
-const initialAtk = savedBaseAtk ? parseInt(savedBaseAtk) : 10; // 10 par défaut si 1ère partie
-const initialDef = savedBaseDef ? parseInt(savedBaseDef) : 5;  // 5 par défaut si 1ère partie
-const initialMoves: Move[] = savedMoves ? JSON.parse(savedMoves) : defaultPlayerMoves;
-
-let initialWeapon: Weapon | null = null;
-if (savedWeapon) {
-  try {
-    initialWeapon = JSON.parse(savedWeapon) as Weapon;
-  } catch (e) {
-    console.error("Erreur lors du chargement de l'arme :", e);
-    initialWeapon = null;
-  }
-}
-
-let initialArmor: Armor | null = null;
-if (savedArmor) {
-  try {
-    initialArmor = JSON.parse(savedArmor) as Armor;
-  } catch (e) {
-    console.error("Erreur lors du chargement de l'armure :", e);
-    initialArmor = null;
-  }
-}
-
-// Conversion sécurisée du sac à dos JSON
-let initialBag: Equipment[] = [];
-if (savedBag) {
-  try {
-    initialBag = JSON.parse(savedBag) as Equipment[];
-  } catch (e) {
-    console.error("Erreur lors du chargement du sac :", e);
-    initialBag = [];
-  }
-}
-
-// 2. Création des combattants avec les PV et l'ATK exacts issus de ses choix passés
-const hero = new Character(
-    'Kevin', 
-    initialHp, 
-    initialAtk, 
-    initialDef,
-    15, 
-    initialMoves,  
-    initialWeapon,
-    initialArmor,
-    initialBag,
-    initialLevel
-);
-hero.xp = initialXp;
-
-const enemy = new Monster('Brute Ennemie', 120, 8, 1, 10, enemyMoves);
-
-// 3. Initialisation des gestionnaires
-const ui = new UIManager();
-
-const storyManager = new StoryManager(
-  hero,
-  (scenario) => ui.showScenario(scenario),
-  (msg) => ui.addLog(msg),
-  (enemy) => {
-    // Démarrer un combat avec l'ennemi du scénario
-    engine.enemy = enemy;
-    ui.hideScenario();
-    ui.updateUI();
-  }
-);
-
-const engine = new CombatEngine(
-  hero,
-  enemy,
-  (msg) => ui.addLog(msg),    // Lien pour ajouter les messages
-  () => ui.updateUI()         // Lien pour rafraîchir les barres de vie
-);
-
-// Connecter le StoryManager au CombatEngine
-engine.setStoryManager(storyManager);
-
-// 4. Lancement du jeu
-ui.init(engine, (selectedMove) => {
-  engine.executeRound(selectedMove);
-}, storyManager);
 </file>
 
 <file path="src/StoryDatabase.ts">
@@ -1197,13 +951,278 @@ export const STORY_DATABASE: ScenarioMap = {
 };
 </file>
 
+<file path="src/Stuff.ts">
+export type EquipmentType = 'weapon' | 'armor' | 'potion';
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+export interface BaseEquipment {
+  id: string;
+  name: string;
+  type: EquipmentType;
+  rarity: Rarity;
+  levelRequired: number;
+  description: string;
+}
+
+export interface Weapon extends BaseEquipment {
+  type: 'weapon';
+  bonusAtk: number;
+}
+
+export interface Armor extends BaseEquipment {
+  type: 'armor';
+  bonusDef: number;
+}
+
+export interface Potion extends BaseEquipment {
+  type: 'potion';
+  healAmount: number;
+}
+
+export type Equipment = Weapon | Armor | Potion;
+
+// 📖 LE DICTIONNAIRE COMPLET DU JEU
+export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[]; potions: Potion[] } = {
+  weapons: [
+    // --- NIVEAU 1 ---
+    { id: 'w_rust_dagger', name: 'Dague Rouillée', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 3, description: 'Mieux que rien, mais attention au tétanos.' },
+    { id: 'w_wooden_staff', name: 'Bâton d\'Initié', type: 'weapon', rarity: 'common', levelRequired: 1, bonusAtk: 4, description: 'Un morceau de bois solidifié par la magie.' },
+    { id: 'w_iron_sword', name: 'Épée en Fer court', type: 'weapon', rarity: 'rare', levelRequired: 1, bonusAtk: 7, description: 'Une lame standard forgée pour les recrues.' },
+    
+    // --- NIVEAU 2 à 3 ---
+    { id: 'w_steel_mace', name: 'Masse en Acier', type: 'weapon', rarity: 'common', levelRequired: 2, bonusAtk: 10, description: 'Lourde et parfaite pour briser des os.' },
+    { id: 'w_ranger_bow', name: 'Arc de Chasseur', type: 'weapon', rarity: 'rare', levelRequired: 2, bonusAtk: 14, description: 'Un arc en bois d\'if d\'une grande précision.' },
+    { id: 'w_shadow_blade', name: 'Lame des Ombres', type: 'weapon', rarity: 'epic', levelRequired: 3, bonusAtk: 22, description: 'Une dague obscure qui semble absorber la lumière ambiante.' },
+
+    // --- NIVEAU 4 à 5 ---
+    { id: 'w_paladin_greatsword', name: 'Espadon de Justice', type: 'weapon', rarity: 'rare', levelRequired: 4, bonusAtk: 28, description: 'Une épée à deux mains bénie par les anciens.' },
+    { id: 'w_lava_axe', name: 'Hache de Magma', type: 'weapon', rarity: 'epic', levelRequired: 5, bonusAtk: 38, description: 'Forgée au cœur d\'un volcan, elle irradie de chaleur.' },
+    
+    // --- ENDGAME / LEGENDARY ---
+    { id: 'w_excalibur', name: 'Excalibur', type: 'weapon', rarity: 'legendary', levelRequired: 5, bonusAtk: 55, description: 'La lame mythique des rois. Sa puissance est sans limite.' }
+  ],
+  armors: [
+    // --- NIVEAU 1 ---
+    { id: 'a_ragged_clothes', name: 'Habits Déchirés', type: 'armor', rarity: 'common', levelRequired: 1, bonusDef: 2, description: 'Protège à peine du vent.' },
+    { id: 'a_leather_vest', name: 'Veste en Cuir', type: 'armor', rarity: 'rare', levelRequired: 1, bonusDef: 5, description: 'Souple et renforcée aux endroits critiques.' },
+    
+    // --- NIVEAU 2 à 3 ---
+    { id: 'a_chainmail', name: 'Cotte de Mailles', type: 'armor', rarity: 'common', levelRequired: 2, bonusDef: 10, description: 'Un assemblage de milliers d\'anneaux de fer.' },
+    { id: 'a_steel_breastplate', name: 'Plastron en Acier', type: 'armor', rarity: 'rare', levelRequired: 3, bonusDef: 18, description: 'Une armure lourde polie comme un miroir.' },
+
+    // --- NIVEAU 4 à 5 ---
+    { id: 'a_dragon_scale', name: 'Armure en Écailles de Dragon', type: 'armor', rarity: 'epic', levelRequired: 4, bonusDef: 30, description: 'Aussi légère que de la soie, aussi dure que le diamant.' },
+    { id: 'a_immortal_plate', name: 'Égide de l\'Immortel', type: 'armor', rarity: 'legendary', levelRequired: 5, bonusDef: 45, description: 'Une armure divine qui repousse le destin lui-même.' }
+  ],
+  potions: [
+    { id: 'p_health_small', name: 'Potion de Soin Mineure', type: 'potion', rarity: 'common', levelRequired: 1, healAmount: 30, description: 'Une petite fiole de liquide rouge. Guérit 30 PV.' },
+    { id: 'p_health_medium', name: 'Potion de Soin', type: 'potion', rarity: 'rare', levelRequired: 2, healAmount: 50, description: 'Un flacon standard de potion de soin. Guérit 50 PV.' },
+    { id: 'p_health_large', name: 'Potion de Soin Majeure', type: 'potion', rarity: 'epic', levelRequired: 4, healAmount: 80, description: 'Une potion puissante distillée par les alchimistes. Guérit 80 PV.' },
+    { id: 'p_health_ultimate', name: 'Élixir de Vie', type: 'potion', rarity: 'legendary', levelRequired: 5, healAmount: 100, description: 'Un élixir légendaire qui restaure la vitalité. Guérit 100 PV.' }
+  ]
+};
+
+export function getEquipmentLoot(enemyLevel: number, targetId?: string): Equipment | null {
+  // 🎯 CAS 1 : On demande un objet ciblé/fixe spécifique (ex: récompense de scénario)
+  if (targetId) {
+    let selectedTemplate = null;
+
+    // On cherche l'id dans les 3 catégories
+    selectedTemplate = ITEM_DATABASE.weapons.find(w => w.id === targetId) ||
+                       ITEM_DATABASE.armors.find(a => a.id === targetId) ||
+                       ITEM_DATABASE.potions.find(p => p.id === targetId);
+
+    if (!selectedTemplate) {
+      console.warn(`L'item "${targetId}" est introuvable dans ITEM_DATABASE.`);
+      return null;
+    }
+
+    // On retourne l'objet ciblé avec son identifiant unique pour le sac à dos
+    return {
+      ...selectedTemplate,
+      id: Math.random().toString(36).substring(2, 11)
+    };
+  }
+
+  // 🎲 CAS 2 : Comportement aléatoire d'origine (inchangé)
+  const randRarity = Math.random() * 100;
+  let targetRarity: 'common' | 'rare' | 'epic' | 'legendary' = 'common';
+
+  if (randRarity < 60) targetRarity = 'common';
+  else if (randRarity < 85) targetRarity = 'rare';
+  else if (randRarity < 97) targetRarity = 'epic';
+  else targetRarity = 'legendary';
+
+  const randType = Math.random() * 100;
+  let itemType: 'weapons' | 'armors' | 'potions';
+  
+  if (randType < 40) itemType = 'weapons';
+  else if (randType < 80) itemType = 'armors';
+  else itemType = 'potions';
+
+  let validItems = ITEM_DATABASE[itemType].filter(
+    (item: any) => item.levelRequired <= enemyLevel && item.rarity === targetRarity
+  );
+
+  if (validItems.length === 0) {
+    validItems = ITEM_DATABASE[itemType].filter((item: any) => item.levelRequired <= enemyLevel);
+  }
+
+  if (validItems.length === 0) {
+    validItems = ITEM_DATABASE.weapons.filter(w => w.levelRequired <= enemyLevel);
+  }
+
+  if (validItems.length === 0) return null;
+
+  const randomIndex = Math.floor(Math.random() * validItems.length);
+  const selectedTemplate = validItems[randomIndex];
+
+  return {
+    ...selectedTemplate,
+    id: Math.random().toString(36).substring(2, 11)
+  };
+}
+
+export function createPotion(healAmount: number = 40): Potion {
+  return {
+    id: Math.random().toString(36).substring(2, 11),
+    name: 'Potion de Soin',
+    type: 'potion',
+    rarity: 'common',
+    levelRequired: 1,
+    healAmount: healAmount,
+    description: 'Une potion de soin standard.'
+  };
+}
+</file>
+
+<file path="src/main.ts">
+import { Character, Move } from './Character';
+import { Monster } from './Monster';
+import { CombatEngine } from './CombatEngine';
+import { UIManager } from './UIManager';
+import { Weapon, Armor, Equipment } from './Stuff';
+import { StoryManager } from './StoryManager';
+
+// 1. Définition des attaques/soins disponibles
+const defaultPlayerMoves: Move[] = [
+  { name: '👊 Charge', damage: 15, type: 'attack', accuracy: 95 },
+  { name: '🩹 Potion de Soin', damage: 30, type: 'heal', accuracy: 100 }
+];
+
+const enemyMoves: Move[] = [
+  { name: 'Morsure', damage: 12, type: 'attack', accuracy: 95 },
+  { name: 'Griffe', damage: 18, type: 'attack', accuracy: 85 },
+  { name: 'Régénération', damage: 20, type: 'heal', accuracy: 100 }
+];
+
+// 2. Création des combattants (Nom, MaxPV, Attaque, Vitesse, Capacités)
+const savedLevel = localStorage.getItem('rpg_player_level');
+const savedXp = localStorage.getItem('rpg_player_xp');
+const savedBaseHp = localStorage.getItem('rpg_player_base_hp');
+const savedBaseAtk = localStorage.getItem('rpg_player_base_atk');
+const savedBaseDef = localStorage.getItem('rpg_player_base_def');
+const savedMoves = localStorage.getItem('rpg_player_moves'); // NOUVEAU : Charge la liste d'attaques
+const savedWeapon = localStorage.getItem('rpg_player_weapon');
+const savedArmor = localStorage.getItem('rpg_player_armor');
+const savedBag = localStorage.getItem('rpg_player_bag');
+
+const initialLevel = savedLevel ? parseInt(savedLevel) : 1;
+const initialXp = savedXp ? parseInt(savedXp) : 0;
+const initialHp = savedBaseHp ? parseInt(savedBaseHp) : 100;   // 100 par défaut si 1ère partie
+const initialAtk = savedBaseAtk ? parseInt(savedBaseAtk) : 10; // 10 par défaut si 1ère partie
+const initialDef = savedBaseDef ? parseInt(savedBaseDef) : 5;  // 5 par défaut si 1ère partie
+const initialMoves: Move[] = savedMoves ? JSON.parse(savedMoves) : defaultPlayerMoves;
+
+let initialWeapon: Weapon | null = null;
+if (savedWeapon) {
+  try {
+    initialWeapon = JSON.parse(savedWeapon) as Weapon;
+  } catch (e) {
+    console.error("Erreur lors du chargement de l'arme :", e);
+    initialWeapon = null;
+  }
+}
+
+let initialArmor: Armor | null = null;
+if (savedArmor) {
+  try {
+    initialArmor = JSON.parse(savedArmor) as Armor;
+  } catch (e) {
+    console.error("Erreur lors du chargement de l'armure :", e);
+    initialArmor = null;
+  }
+}
+
+// Conversion sécurisée du sac à dos JSON
+let initialBag: Equipment[] = [];
+if (savedBag) {
+  try {
+    initialBag = JSON.parse(savedBag) as Equipment[];
+  } catch (e) {
+    console.error("Erreur lors du chargement du sac :", e);
+    initialBag = [];
+  }
+}
+
+// 2. Création des combattants avec les PV et l'ATK exacts issus de ses choix passés
+const hero = new Character(
+    'Kevin', 
+    initialHp, 
+    initialAtk, 
+    initialDef,
+    15, 
+    initialMoves,  
+    initialWeapon,
+    initialArmor,
+    initialBag,
+    initialLevel
+);
+hero.xp = initialXp;
+
+const enemy = new Monster('Brute Ennemie', 120, 8, 1, 10, enemyMoves);
+
+// 3. Initialisation des gestionnaires
+const ui = new UIManager();
+
+let storyManager: StoryManager;
+let engine: CombatEngine;
+
+storyManager = new StoryManager(
+  hero,
+  (scenario) => ui.showScenario(scenario),
+  (msg) => ui.addLog(msg),
+  (enemy) => {
+    // Démarrer un combat avec l'ennemi du scénario
+    engine.enemy = enemy;
+    ui.hideScenario();
+    ui.updateUI();
+  }
+);
+
+engine = new CombatEngine(
+  hero,
+  enemy,
+  (msg) => ui.addLog(msg),    // Lien pour ajouter les messages
+  () => ui.updateUI()         // Lien pour rafraîchir les barres de vie
+);
+
+// Connecter le StoryManager au CombatEngine
+engine.setStoryManager(storyManager);
+
+// 4. Lancement du jeu
+ui.init(engine, (selectedMove) => {
+  engine.executeRound(selectedMove);
+}, storyManager);
+</file>
+
 <file path="src/StoryManager.ts">
 import { Character } from './Character';
 import { Scenario, Choice, ScenarioConsequence } from './Scenario';
 import { STORY_DATABASE } from './StoryDatabase';
 import { getRandomMonster, getMonsterByType } from './Bestiary';
 import { Monster } from './Monster';
-import { getRandomEquipmentLoot } from './Stuff';
+import { getEquipmentLoot } from './Stuff';
 import { Equipment } from './Stuff';
 
 export class StoryManager {
@@ -1239,13 +1258,35 @@ export class StoryManager {
       return;
     }
 
+    const consequence = choice.consequence;
+    if (!consequence) return;
+
+    // 🎒 Gestion simplifiée grâce à la fonction centralisée
+    if (consequence.type === 'reward' && consequence.itemReward) {
+      const player = this.player;
+      
+      // On demande un loot ciblé sur l'ID de la récompense
+      const uniqueItem = getEquipmentLoot(player.level, consequence.itemReward);
+
+      if (uniqueItem) {
+        const added = player.addItemToInventory(uniqueItem);
+
+        if (added) {
+          localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
+          this.onLog(`🎁 **Butin obtenu** : Vous avez reçu **${uniqueItem.name}** !`);
+        } else {
+          this.onLog(`⚠️ **Sac plein !** Vous avez trouvé **${uniqueItem.name}** mais votre inventaire est complet.`);
+        }
+      }
+    }
+
     // Vérifier si le choix est disponible (offrande avec objet requis)
     if (choice.consequence.type === 'offer' && !this.canMakeChoice(choice)) {
       this.onLog(`⚠️ **Impossible** : Vous n'avez pas l'objet requis.`);
       return;
     }
 
-    this.applyConsequence(choice.consequence);
+    this.applyConsequence(consequence);
   }
 
   canMakeChoice(choice: Choice): boolean {
@@ -1352,7 +1393,7 @@ export class StoryManager {
     }
     
     if (consequence.itemReward) {
-      const loot = getRandomEquipmentLoot(this.player.level);
+      const loot = getEquipmentLoot(this.player.level);
       if (loot) {
         this.player.addItemToInventory(loot);
         this.onLog(`🎒 **Objet trouvé** : ${loot.name}`);
@@ -1485,7 +1526,7 @@ export class StoryManager {
 import { Character, Combatant, Move } from './Character';
 import { Monster } from './Monster';
 import { getRandomMonster } from './Bestiary';
-import { getRandomEquipmentLoot } from './Stuff';
+import { getEquipmentLoot } from './Stuff';
 import { StoryManager } from './StoryManager';
 
 export class CombatEngine {
@@ -1560,52 +1601,54 @@ export class CombatEngine {
 
   isChoosingBonus: boolean = false;
 
-  private checkBattleStatus() {
+private checkBattleStatus() {
     if (!this.player.isAlive()) {
       this.onLogCallback(`❌ **K.O.** ! ${this.player.name} a perdu le combat...`);
       
-      // Si on est en mode histoire, notifier le StoryManager
       if (this.storyManager) {
         this.storyManager.onCombatDefeat();
       }
     } else if (!this.enemy.isAlive()) {
       this.onLogCallback(`🏆 **VICTOIRE** ! ${this.enemy.name} a mordu la poussière !`);
      
-      if (Math.random() < 0.30) {
-        const newPotion = getRandomEquipmentLoot(this.enemy.level);
-        if (newPotion && newPotion.type === 'potion') {
-          this.player.addItemToInventory(newPotion);
-          this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
-          localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
-        }
-      }
+      // 🎯 ON NE GÉNÈRE LE LOOT ALÉATOIRE QUE SI LE COMBAT N'EST PAS LIÉ À UN SCÉNARIO PRÉVU
+      // Pour savoir si on est dans l'histoire, on vérifie si le scénario actuel attend un combat
+      const isStoryCombat = this.storyManager && this.storyManager.getCurrentScenario()?.id.includes('combat');
 
-      if (Math.random() < 0.95) {
-        // Appellera notre nouvelle fonction générique (pense à l'importer en haut si besoin)
-        const newLoot = getRandomEquipmentLoot(this.enemy.level); 
-
-        if (newLoot) {
-          const addedSuccessfully = this.player.addItemToInventory(newLoot);
-          
-          if (addedSuccessfully) {
-            const rarityStars = newLoot.rarity === 'legendary' ? '✨✨' : '';
-            const typeLabel = newLoot.type === 'weapon' ? 'ARME' : 'ARMURE';
-            
-            this.onLogCallback(`\n🎒 **BUTIN AJOUTÉ AU SAC (${newLoot.rarity.toUpperCase()})** ${rarityStars}`);
-            this.onLogCallback(` Vous avez trouvé une ${typeLabel} : **${newLoot.name}** !`);
-            this.onLogCallback(` *"${newLoot.description}"* \n`);
-            
+      if (!isStoryCombat) {
+        // --- LOOT DE COMBAT ALÉATOIRE CLASSIQUE ---
+        if (Math.random() < 0.30) {
+          const newPotion = getEquipmentLoot(this.enemy.level, 'p_health_small'); // ou votre ancienne logique
+          if (newPotion && newPotion.type === 'potion') {
+            this.player.addItemToInventory(newPotion);
+            this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
             localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
-          } else {
-            this.onLogCallback(`\n⚠️ **SAC PLEIN !** Tu as trouvé **${newLoot.name}** mais ton sac à dos est plein.`);
           }
+        }
 
-          if (this.onUpdateUICallback) {
-            this.onUpdateUICallback();
+        if (Math.random() < 0.95) {
+          const newLoot = getEquipmentLoot(this.enemy.level); // Génération aléatoire sans ID ciblé
+
+          if (newLoot) {
+            const addedSuccessfully = this.player.addItemToInventory(newLoot);
+            
+            if (addedSuccessfully) {
+              const rarityStars = newLoot.rarity === 'legendary' ? '✨✨' : '';
+              const typeLabel = newLoot.type === 'weapon' ? 'ARME' : 'ARMURE';
+              
+              this.onLogCallback(`\n🎒 **BUTIN AJOUTÉ AU SAC (${newLoot.rarity.toUpperCase()})** ${rarityStars}`);
+              this.onLogCallback(` Vous avez trouvé une ${typeLabel} : **${newLoot.name}** !`);
+              this.onLogCallback(` *"${newLoot.description}"* \n`);
+              
+              localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+            } else {
+              this.onLogCallback(`\n⚠️ **SAC PLEIN !** Tu as trouvé **${newLoot.name}** mais ton sac à dos est plein.`);
+            }
           }
         }
       }
 
+      // --- EXPÉRIENCE ET STATS (Toujours actif) ---
       const xpGained = this.enemy.level * 50;
       const xpResult = this.player.gainXp(xpGained);
       xpResult.logs.forEach(log => this.onLogCallback(log));
@@ -1615,16 +1658,18 @@ export class CombatEngine {
         this.onLogCallback(`🎁 Choisissez une récompense de niveau !`);
       }
 
-      // Sauvegarde immédiate du niveau et de l'XP
+      // Sauvegarde des données du joueur
       localStorage.setItem('rpg_player_level', this.player.level.toString());
       localStorage.setItem('rpg_player_xp', this.player.xp.toString());
-      // On sauvegarde aussi les stats de base qui ont pu changer via les bonus précédents
       localStorage.setItem('rpg_player_base_hp', this.player.baseMaxHp.toString());
       localStorage.setItem('rpg_player_base_atk', this.player.baseAttack.toString());
       
-      // Si on est en mode histoire, notifier le StoryManager
-      if (this.storyManager) {
-        this.storyManager.onCombatVictory();
+      // ⚠️ DÉCLENCHEMENT SÉCURISÉ : 
+      // Si c'est un combat hors-scénario (entraînement, combat libre), 
+      // on doit forcer la création d'un nouveau combat directement, sinon le jeu se bloque.
+      if (!isStoryCombat) {
+        // Optionnel : vous pouvez laisser l'UI afficher un bouton "Continuer" pour lancer le prochain combat libre
+        // ou appeler startNewCombat() après un court instant.
       }
     }
   }
@@ -1666,6 +1711,8 @@ export class UIManager {
   private storyManager!: StoryManager;
   private currentScenario: Scenario | null = null;
   private isStoryMode: boolean = false;
+  // 📚 Variable pour stocker l'historique complet des logs de la session active
+  private logHistory: string[] = ["Le combat commence ! Choisissez une action."];
 
   init(engine: CombatEngine, onActionSelected: (move: Move) => void, storyManager: StoryManager) {
     this.engine = engine;
@@ -1738,7 +1785,7 @@ export class UIManager {
       </div>
     `;
 
-    // Reset du LocalStorage (seul bouton garanti présent dans le HTML ci-dessus)
+    // Reset du LocalStorage
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) {
       resetBtn.onclick = () => {
@@ -1790,7 +1837,7 @@ export class UIManager {
 
   private selectBonusFinished(logMessage: string) {
     this.engine.isChoosingBonus = false;
-    this.addLog(`` + `✨ **Bonus choisi** : ${logMessage}`);
+    this.addLog(`✨ **Bonus choisi** : ${logMessage}`);
     
     localStorage.setItem('rpg_player_base_hp', this.engine.player.baseMaxHp.toString());
     localStorage.setItem('rpg_player_base_atk', this.engine.player.baseAttack.toString());
@@ -1849,9 +1896,9 @@ export class UIManager {
           </div>
         </div>
 
-        <!-- Journal de combat -->
+        <!-- Journal de combat (Restauré à partir de l'historique) -->
         <div id="journal" style="height: 120px; overflow-y: auto; background: #222; color: #fff; padding: 10px; font-size: 14px; border-radius: 4px; margin-bottom: 20px; line-height: 1.4;">
-          Le combat commence ! Choisissez une action.
+          ${this.logHistory.join('<br>')}
         </div>
 
         <!-- Panneau d'actions de Combat -->
@@ -1874,7 +1921,7 @@ export class UIManager {
         </button>
       `;
 
-      // Liaison sécurisée des boutons après leur création
+      // Liaison des événements
       this.setupBonusEvents();
       
       const nextBtn = document.getElementById('next-combat-btn');
@@ -1883,6 +1930,10 @@ export class UIManager {
       }
       
       this.renderButtons((move) => this.engine.executeRound(move));
+
+      // Auto-scroll du journal vers le bas à l'apparition de l'UI de combat
+      const journal = document.getElementById('journal');
+      if (journal) journal.scrollTop = journal.scrollHeight;
     }
 
     // --- MISE À JOUR DES VALEURS DU COMBAT ---
@@ -1942,13 +1993,14 @@ export class UIManager {
     pHp.textContent = `${this.engine.player.hp}/${this.engine.player.maxHp} PV`;
     eHp.textContent = `${this.engine.enemy.hp}/${this.engine.enemy.maxHp} PV`;
 
+// --- GESTION DES PANNEAUX ET DES BOUTONS DE TRANSITION ---
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
-      // Le combat est en cours
+      // Le combat est en cours : on affiche les actions de combat standard
       actionsContainer.style.display = 'grid';
       bonusContainer.style.display = 'none';
       nextCombatBtn.style.display = 'none';
     } else {
-      // Le combat est terminé
+      // LE COMBAT EST TERMINÉ
       actionsContainer.style.display = 'none';
       
       if (this.engine.isChoosingBonus) {
@@ -1964,25 +2016,36 @@ export class UIManager {
           skillBtn.style.display = 'none';
         }
       } else {
-        // Option B : Le combat est gagné (ou perdu) et on attend la transition
+        // Option B : Écran intermédiaire de fin de combat (Victoire ou Défaite)
         bonusContainer.style.display = 'none';
         nextCombatBtn.style.display = 'block';
         
-        // Si nous sommes dans un combat lié à l'histoire (Story Mode imminent au clic)
-        if (this.storyManager && this.engine.player.isAlive()) {
+        if (this.engine.player.isAlive()) {
+          // Cas de Victoire : On affiche un écran de transition propre
           nextCombatBtn.textContent = "➡️ Continuer l'aventure";
-          nextCombatBtn.style.background = "#2196F3"; // Bleu aventure au lieu de vert combat
+          nextCombatBtn.style.background = "#2196F3"; // Bleu d'aventure
+          
+          // On modifie temporairement le titre ou le journal pour marquer la transition
+          const journal = document.getElementById('journal');
+          if (journal && !journal.innerHTML.includes("🎉 VICTOIRE")) {
+            this.addLog(`🎉 **VICTOIRE !** Vous avez vaincu ${this.engine.enemy.name}.`);
+            this.addLog(`⭐ Niveau actuel : **Niv. ${this.engine.player.level}** (${this.engine.player.xp}/${xpNeeded} XP)`);
+          }
+
           nextCombatBtn.onclick = () => {
-            // On déclenche la transition vers le scénario suivant ici !
+            // C'est seulement au clic sur "Continuer" qu'on passe à l'histoire suivante
             const nextScenario = this.storyManager.getCurrentScenario();
             this.showScenario(nextScenario);
             this.updateUI();
           };
         } else {
-          // Mode combat classique infini si l'histoire est finie ou indisponible
-          nextCombatBtn.textContent = "⚔️ Commencer un Nouveau Combat";
-          nextCombatBtn.style.background = "#4CAF50";
-          nextCombatBtn.onclick = () => this.engine.startNewCombat();
+          // Cas de Défaite
+          nextCombatBtn.textContent = "💀 Recommencer (Retour au dernier point)";
+          nextCombatBtn.style.background = "#F44336"; // Rouge défaite
+          nextCombatBtn.onclick = () => {
+            // Logique de défaite / reset de combat
+            this.engine.startNewCombat();
+          };
         }
       }
     }
@@ -2100,6 +2163,9 @@ export class UIManager {
   }
 
   addLog(message: string) {
+    // 💾 On pousse le log dans notre tableau historique
+    this.logHistory.push(message);
+
     const journal = document.getElementById('journal');
     if (!journal) return;
     journal.innerHTML += `<br>${message}`;
@@ -2114,42 +2180,18 @@ export class UIManager {
     if (!workspace) return;
     
     const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
-    const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
+    //const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
     
     workspace.innerHTML = `
       <div id="scenario-panel" style="${isDeathScenario ? 'background: #FFEBEE; border: 2px solid #D32F2F;' : 'background: #E3F2FD; border: 2px solid #2196F3;'} padding: 15px; border-radius: 8px; margin-bottom: 15px;">
         <h3 style="margin: 0 0 10px 0; color: ${isDeathScenario ? '#D32F2F' : '#1565C0'};">📖 ${scenario.title}</h3>
         <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5; font-size: 14px;">${scenario.description}</p>
         
-        ${!isDeathScenario ? '<div id="potion-button-container" style="margin-bottom: 15px;"></div>' : ''}
-        
         <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 8px;"></div>
       </div>
     `;
 
-    if (!isDeathScenario) {
-      const potionContainer = document.getElementById('potion-button-container')!;
-      const potionBtn = document.createElement('button');
-      potionBtn.textContent = '🧪 Utiliser une Potion';
-      
-      if (!hasPotion) {
-        potionBtn.style.cssText = 'width: 100%; padding: 10px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; opacity: 0.6;';
-      } else {
-        potionBtn.style.cssText = 'width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;';
-        potionBtn.onmouseover = () => potionBtn.style.background = '#388E3C';
-        potionBtn.onmouseout = () => potionBtn.style.background = '#4CAF50';
-        potionBtn.onclick = () => {
-          if (this.storyManager.usePotion()) {
-            this.addLog('🧪 Vous utilisez une potion et récupérez des PV !');
-            this.updateUI();
-            this.showScenario(scenario);
-          }
-        };
-      }
-      potionContainer.appendChild(potionBtn);
-    }
-
-    const choicesContainer = document.getElementById('scenario-choices')!;
+const choicesContainer = document.getElementById('scenario-choices')!;
     scenario.choices.forEach(choice => {
       const choiceBtn = document.createElement('button');
       choiceBtn.textContent = choice.text;
@@ -2170,7 +2212,20 @@ export class UIManager {
       }
       
       if (canMakeChoice) {
-        choiceBtn.onclick = () => this.storyManager.makeChoice(choice.id);
+        // --- MODIFICATION ICI ---
+        choiceBtn.onclick = () => {
+          // 1. On applique le choix (ce qui distribue le loot dans StoryManager)
+          this.storyManager.makeChoice(choice.id);
+          
+          // 2. On récupère le nouveau scénario généré
+          const nextScenario = this.storyManager.getCurrentScenario();
+          
+          // 3. On l'affiche à l'écran
+          this.showScenario(nextScenario);
+          
+          // 4. On rafraîchit toute l'interface (ce qui met à jour le sac à dos visuellement)
+          this.updateUI();
+        };
       }
       choicesContainer.appendChild(choiceBtn);
     });
@@ -2180,10 +2235,8 @@ export class UIManager {
 
   hideScenario() {
     this.isStoryMode = false;
-    const workspace = document.getElementById('game-workspace');
-    if (workspace) {
-      workspace.innerHTML = '';
-    }
+    // ⚡ On force un rafraîchissement immédiat de l'UI pour ré-injecter la scène de combat
+    this.updateUI();
   }
 }
 </file>

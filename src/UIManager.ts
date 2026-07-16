@@ -293,8 +293,13 @@ export class UIManager {
     eHp.textContent = `${this.engine.enemy.hp}/${this.engine.enemy.maxHp} PV`;
 
 // --- GESTION DES PANNEAUX ET DES BOUTONS DE TRANSITION ---
+    console.log('[UIManager] updateUI - Player alive:', this.engine.player.isAlive(), 'Enemy alive:', this.engine.enemy.isAlive());
+    console.log('[UIManager] updateUI - Player HP:', this.engine.player.hp, '/', this.engine.player.maxHp);
+    console.log('[UIManager] updateUI - Enemy HP:', this.engine.enemy.hp, '/', this.engine.enemy.maxHp);
+    
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
       // Le combat est en cours : on affiche les actions de combat standard
+      console.log('[UIManager] Combat en cours - affichage actions-container');
       actionsContainer.style.display = 'grid';
       bonusContainer.style.display = 'none';
       nextCombatBtn.style.display = 'none';
@@ -490,7 +495,7 @@ export class UIManager {
       </div>
     `;
 
-const choicesContainer = document.getElementById('scenario-choices')!;
+    const choicesContainer = document.getElementById('scenario-choices')!;
     scenario.choices.forEach(choice => {
       const choiceBtn = document.createElement('button');
       choiceBtn.textContent = choice.text;
@@ -533,7 +538,38 @@ const choicesContainer = document.getElementById('scenario-choices')!;
   }
 
   hideScenario() {
+    console.log('[UIManager] hideScenario appelé');
     this.isStoryMode = false;
+    
+    // Cacher le panneau de scénario
+    const scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
+    if (scenarioPanel) {
+      console.log('[UIManager] Cachage du scenario-panel');
+      scenarioPanel.style.display = 'none';
+    }
+    
+    // Réactiver les éléments de combat
+    const container = document.getElementById('actions-container') as HTMLElement;
+    const invContainer = document.getElementById('inventory-container') as HTMLElement;
+    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
+    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    
+    if (container) {
+      console.log('[UIManager] Affichage actions-container');
+      container.style.display = 'grid';
+    }
+    if (invContainer) {
+      invContainer.style.display = 'block';
+    }
+    if (bonusContainer) {
+      bonusContainer.style.display = 'none';
+    }
+    if (nextCombatBtn) {
+      nextCombatBtn.style.display = 'none';
+      (nextCombatBtn as HTMLButtonElement).disabled = false;
+    }
+    
+    console.log('[UIManager] hideScenario terminé, appel de updateUI');
     // ⚡ On force un rafraîchissement immédiat de l'UI pour ré-injecter la scène de combat
     this.updateUI();
   }
