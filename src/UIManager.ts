@@ -23,17 +23,17 @@ export class UIManager {
     this.showScenario(storyManager.getCurrentScenario());
   }
 
-  private setupHTMLStructure() {
+
+private setupHTMLStructure() {
     const app = document.getElementById('app');
     if (!app) return;
 
     app.innerHTML = `
-      <div style="font-family: sans-serif; max-width: 500px; margin: 20px auto; border: 2px solid #333; padding: 20px; border-radius: 8px; background: #f9f9f9;">
-        <!-- Zone Infos Joueur -->
+      <div style="font-family: sans-serif; max-width: 500px; margin: 20px auto; border: 2px solid #333; padding: 20px; border-radius: 8px; background: #f9f9f9; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <!-- Zone Infos Joueur (Inchangée) -->
         <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <strong id="p-level" style="color: #2196F3; font-size: 16px;">Niveau 1</strong>
-            <!-- ⚔️ On garde l'ID existant ou on utilise le nouveau pour ATK + DEF -->
             <div id="p-stats" style="font-size: 11px; color: #555; margin-top: 2px;">
               <span id="player-display-atk">ATK: 10</span> | <span id="player-display-def">DEF: 0</span>
             </div>
@@ -45,7 +45,6 @@ export class UIManager {
             </div>
             <span id="p-xp-text" style="font-size: 12px; color: #666; min-width: 50px;">0/100</span>
           </div>
-          <!-- 🛡️ Zone Équipements (Arme + Armure alignées verticalement) -->
           <div style="display: flex; flex-direction: column; gap: 2px; text-align: right;">
             <div>
               <span id="player-weapon" style="font-size: 12px; color: #666; cursor: help;">⚔️ À mains nues</span>
@@ -56,63 +55,22 @@ export class UIManager {
           </div>
         </div> 
 
-        <!-- Zone Combat -->
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-          <div>
-            <h3 id="p-name" style="margin: 0 0 5px 0;">Joueur</h3>
-            <div style="width: 150px; background: #ddd; height: 15px; border-radius: 10px; overflow: hidden;">
-              <div id="p-bar" style="width: 100%; background: #4CAF50; height: 100%; transition: width 0.3s;"></div>
-            </div>
-            <span id="p-hp">100/100 PV</span>
-          </div>
-          <div style="text-align: right;">
-            <h3 id="e-name" style="margin: 0 0 5px 0;">Adversaire</h3>
-            <span style="font-size: 12px; color: #f44336; font-weight: bold;">Niv. <span id="e-level">1</span></span>
-            <div style="width: 150px; background: #ddd; height: 15px; border-radius: 10px; overflow: hidden; margin-top: 5px;">
-              <div id="e-bar" style="width: 100%; background: #4CAF50; height: 100%; transition: width 0.3s;"></div>
-            </div>
-            <span id="e-hp">100/100 PV</span>
-          </div>
+        <!-- ================= Espace de travail central (Combat ou Scénario) ================= -->
+        <div id="game-workspace">
+          <!-- Ce bloc contiendra soit l'écran de combat, soit l'écran de scénario -->
         </div>
 
-        <!-- Journal de combat -->
-        <div id="journal" style="height: 120px; overflow-y: auto; background: #222; color: #fff; padding: 10px; font-size: 14px; border-radius: 4px; margin-bottom: 20px; line-height: 1.4;">
-          Le combat commence ! Choisissez une action.
-        </div>
-
-        <!-- Panneau 1 : Boutons d'actions classiques -->
-        <div id="actions-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
-        <div id="inventory-container" style="margin-top: 10px;">
-          <button id="use-potion-btn" style="width: 100%; padding: 10px; background: #9C27B0; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
-            🎒 Utiliser Sac : Potion (Stock: <span id="potion-count">0</span>)
-          </button>
-        </div>
+        <!-- Sac à dos (Toujours visible et accessible !) -->
         <div id="bag-container" style="margin-top: 15px; background: #ECEFF1; border: 1px solid #B0BEC5; padding: 12px; border-radius: 6px;">
           <h4 style="margin: 0 0 8px 0; color: #37474F; display: flex; justify-content: space-between;">
             <span>🎒 Contenu du Sac à dos</span>
             <span id="bag-slots" style="font-size: 11px; color: #78909C;">0 objet</span>
           </h4>
-          <!-- Liste dynamique des équipements stockés -->
           <div id="bag-items-list" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
             <span style="font-size: 12px; color: #90A4AE; font-style: italic;">Votre sac est vide d'équipements...</span>
           </div>
         </div>
         
-        <!-- Panneau 2 : Choix du Bonus (Caché par défaut) -->
-        <div id="bonus-container" style="display: none; background: #FFF3E0; border: 1px solid #FFB74D; padding: 15px; border-radius: 6px; text-align: center; margin-top: 10px;">
-          <h4 style="margin: 0 0 10px 0; color: #E65100;">🎉 BONUS DE LEVEL UP ! 🎉</h4>
-          <p style="font-size: 13px; margin: 0 0 15px 0; color: #555;">Choisissez une amélioration permanente :</p>
-          <div style="display: flex; gap: 10px;">
-            <button id="bonus-hp-btn" style="flex: 1; padding: 10px; background: #E65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">❤️ Vitalité (+25 PV Max)</button>
-            <button id="bonus-atk-btn" style="flex: 1; padding: 10px; background: #E65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">⚔️ Force (+5 Attaque)</button>
-          </div>
-          <button id="bonus-skill-btn" style="display: none; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px;">📖 Apprendre un nouveau sort</button>
-        </div>
-        <!-- Panneau 3 : Bouton Prochain Match -->
-        <button id="next-combat-btn" style="display: none; width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;">
-          ⚔️ Commencer un Nouveau Combat
-        </button>
-
         <!-- Outils Dev / Reset -->
         <button id="reset-btn" style="margin-top: 25px; width: 100%; background: transparent; border: 1px dashed #aaa; color: #888; padding: 5px; cursor: pointer; font-size: 11px;">
           🔄 Réinitialiser la sauvegarde (Niv. 1)
@@ -126,8 +84,8 @@ export class UIManager {
       localStorage.setItem('rpg_player_xp', '0');
       localStorage.setItem('rpg_player_base_hp', '100');
       localStorage.setItem('rpg_player_base_atk', '10');
-      localStorage.removeItem('rpg_player_weapon'); // Supprime l'arme
-      localStorage.removeItem('rpg_player_armor'); // Supprime l'armure
+      localStorage.removeItem('rpg_player_weapon');
+      localStorage.removeItem('rpg_player_armor');
       localStorage.removeItem('rpg_player_moves');
       localStorage.removeItem('rpg_player_bag');
       window.location.reload();
@@ -203,6 +161,71 @@ export class UIManager {
   }
 
   updateUI() {
+    const workspace = document.getElementById('game-workspace');
+    if (!workspace) return;
+
+    // Si nous sommes en mode histoire, on ne dessine pas l'interface de combat par-dessus
+    if (this.isStoryMode) {
+      this.updateBagUI(); // Mettre quand même à jour le sac à dos
+      return;
+    }
+
+    // 1. Si l'arène de combat n'est pas encore dessinée dans le workspace, on l'y met !
+    if (!document.getElementById('p-bar')) {
+      workspace.innerHTML = `
+        <!-- Zone Combat -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div>
+            <h3 id="p-name" style="margin: 0 0 5px 0;">Joueur</h3>
+            <div style="width: 150px; background: #ddd; height: 15px; border-radius: 10px; overflow: hidden;">
+              <div id="p-bar" style="width: 100%; background: #4CAF50; height: 100%; transition: width 0.3s;"></div>
+            </div>
+            <span id="p-hp">100/100 PV</span>
+          </div>
+          <div style="text-align: right;">
+            <h3 id="e-name" style="margin: 0 0 5px 0;">Adversaire</h3>
+            <span style="font-size: 12px; color: #f44336; font-weight: bold;">Niv. <span id="e-level">1</span></span>
+            <div style="width: 150px; background: #ddd; height: 15px; border-radius: 10px; overflow: hidden; margin-top: 5px;">
+              <div id="e-bar" style="width: 100%; background: #4CAF50; height: 100%; transition: width 0.3s;"></div>
+            </div>
+            <span id="e-hp">100/100 PV</span>
+          </div>
+        </div>
+
+        <!-- Journal de combat -->
+        <div id="journal" style="height: 120px; overflow-y: auto; background: #222; color: #fff; padding: 10px; font-size: 14px; border-radius: 4px; margin-bottom: 20px; line-height: 1.4;">
+          Le combat commence ! Choisissez une action.
+        </div>
+
+        <!-- Panneau d'actions de Combat -->
+        <div id="actions-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+        
+        <!-- Panneau Choix de Bonus -->
+        <div id="bonus-container" style="display: none; background: #FFF3E0; border: 1px solid #FFB74D; padding: 15px; border-radius: 6px; text-align: center; margin-top: 10px;">
+          <h4 style="margin: 0 0 10px 0; color: #E65100;">🎉 BONUS DE LEVEL UP ! 🎉</h4>
+          <p style="font-size: 13px; margin: 0 0 15px 0; color: #555;">Choisissez une amélioration permanente :</p>
+          <div style="display: flex; gap: 10px;">
+            <button id="bonus-hp-btn" style="flex: 1; padding: 10px; background: #E65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">❤️ Vitalité (+25 PV Max)</button>
+            <button id="bonus-atk-btn" style="flex: 1; padding: 10px; background: #E65100; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">⚔️ Force (+5 Attaque)</button>
+          </div>
+          <button id="bonus-skill-btn" style="display: none; padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px; width: 100%;">📖 Apprendre un nouveau sort</button>
+        </div>
+
+        <!-- Bouton Prochain Match -->
+        <button id="next-combat-btn" style="display: none; width: 100%; padding: 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px;">
+          ⚔️ Commencer un Nouveau Combat
+        </button>
+      `;
+
+      // Ré-attacher les événements des boutons
+      this.setupBonusEvents();
+      document.getElementById('next-combat-btn')!.onclick = () => {
+        this.engine.startNewCombat();
+      };
+      this.renderButtons((move) => this.engine.executeRound(move));
+    }
+
+    // --- MISE À JOUR DES VALEURS DU COMBAT ---
     const pBar = document.getElementById('p-bar') as HTMLElement;
     const eBar = document.getElementById('e-bar') as HTMLElement;
     const pHp = document.getElementById('p-hp') as HTMLElement;
@@ -222,46 +245,37 @@ export class UIManager {
     const weaponBonus = this.engine.player.equippedWeapon ? this.engine.player.equippedWeapon.bonusAtk : 0;
     const defenseBonus = this.engine.player.equippedArmor ? this.engine.player.equippedArmor.bonusDef : 0;
 
-    // Mise à jour des textes basiques
     document.getElementById('p-name')!.textContent = this.engine.player.name;
     document.getElementById('e-name')!.textContent = this.engine.enemy.name;
     pLevel.textContent = `⭐ Niveau ${this.engine.player.level}`;
     pStatsText.textContent = `ATK: ${baseAtk + weaponBonus} | DEF: ${baseDef + defenseBonus} | PV Max: ${this.engine.player.maxHp}`;
 
+    // Arme & Armure text update (Inchangé)
     const pWeaponText = document.getElementById('player-weapon')!;
-    
     if (pWeaponText) {
       if (this.engine.player.equippedWeapon) {
         const weapon = this.engine.player.equippedWeapon;
         pWeaponText.textContent = `⚔️ ${weapon.name} [${weapon.rarity.toUpperCase()}]`;
         pWeaponText.title = weapon.description;
-      } else {
-        pWeaponText.textContent = `✋ À mains nues`;
-        pWeaponText.title = "Vous n'avez pas d'arme équipée.";
-      }
+      } else { pWeaponText.textContent = `✋ À mains nues`; }
     }
 
     const pArmorText = document.getElementById('player-armor')!;
-    
     if (pArmorText) {
       if (this.engine.player.equippedArmor) {
         const armor = this.engine.player.equippedArmor;
         pArmorText.textContent = `🛡️ ${armor.name} [${armor.rarity.toUpperCase()}]`;
         pArmorText.title = armor.description;
-      } else {
-        pArmorText.textContent = `🛡️ Vêtements de civil`;
-        pArmorText.title = "Vous n'avez pas d'armure équipée.";
-      }
+      } else { pArmorText.textContent = `🛡️ Vêtements de civil`; }
     }
 
     eLevel.textContent = this.engine.enemy.level.toString();
 
-    // Calculs de l'XP
+    // XP & HP calculations (Inchangé)
     const xpNeeded = this.engine.player.getXpNeededForNextLevel();
     pXpBar.style.width = `${(this.engine.player.xp / xpNeeded) * 100}%`;
     pXpText.textContent = `${this.engine.player.xp}/${xpNeeded}`;
 
-    // Calculs des PV
     const pPct = (this.engine.player.hp / this.engine.player.maxHp) * 100;
     const ePct = (this.engine.enemy.hp / this.engine.enemy.maxHp) * 100;
     pBar.style.width = `${pPct}%`;
@@ -270,35 +284,18 @@ export class UIManager {
     pHp.textContent = `${this.engine.player.hp}/${this.engine.player.maxHp} PV`;
     eHp.textContent = `${this.engine.enemy.hp}/${this.engine.enemy.maxHp} PV`;
 
-    // Met à jour le compteur de potions
-    const potionCountSpan = document.getElementById('potion-count')!;
-    const invContainer = document.getElementById('inventory-container')!;
-    // potionCountSpan.textContent = this.engine.player.inventory.potions.toString();
-    const potionCount = this.engine.player.inventory.items.filter(item => item.type === 'potion').length;
-    potionCountSpan.textContent = potionCount.toString();
-  
-
-    // 🔀 LOGIQUE D'AFFICHAGE DES PANNEAUX
+    // Visibilité des éléments de combat
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
-      // 1. Le combat est en cours
       actionsContainer.style.display = 'grid';
-      invContainer.style.display = 'block';
       bonusContainer.style.display = 'none';
       nextCombatBtn.style.display = 'none';
     } else {
-      // 2. Quelqu'un est K.O. : on coupe toujours les boutons d'attaques
       actionsContainer.style.display = 'none';
-      invContainer.style.display = 'none';
-
       if (this.engine.isChoosingBonus) {
-        // En attente d'un choix de niveau : on affiche uniquement le panneau orange
         bonusContainer.style.display = 'block';
         nextCombatBtn.style.display = 'none';
-
-        // Regarde si le niveau débloque une compétence
         const availableSkill = getSkillForLevel(this.engine.player.level);
         const skillBtn = document.getElementById('bonus-skill-btn') as HTMLElement;
-        
         if (availableSkill) {
           skillBtn.style.display = 'block';
           skillBtn.textContent = `📖 Apprendre ${availableSkill.name} (Dégâts: ${availableSkill.damage})`;
@@ -306,20 +303,24 @@ export class UIManager {
           skillBtn.style.display = 'none';
         }
       } else {
-        // Pas de bonus en attente (ou bonus déjà choisi) : on montre le bouton vert du match suivant !
         bonusContainer.style.display = 'none';
         nextCombatBtn.style.display = 'block';
       }
     }
 
-    // --- GESTION ET RENDU DU SAC À DOS ---
+    this.updateBagUI();
+  }
+
+  // J'isole le rendu du sac à dos pour pouvoir l'appeler indépendamment
+  private updateBagUI() {
     const bagSlots = document.getElementById('bag-slots')!;
     const bagItemsList = document.getElementById('bag-items-list')!;
+    if (!bagSlots || !bagItemsList) return;
+
     const player = this.engine.player;
     const items = player.inventory.items;
 
     bagSlots.textContent = `${items.length} / ${player.MAX_BAG_SLOTS} objet${items.length > 1 ? 's' : ''}`;
-
     if (items.length >= player.MAX_BAG_SLOTS) {
       bagSlots.style.color = '#D32F2F';
       bagSlots.style.fontWeight = 'bold';
@@ -332,7 +333,6 @@ export class UIManager {
       bagItemsList.innerHTML = `<span style="font-size: 12px; color: #90A4AE; font-style: italic; text-align: center; padding: 5px;">Votre sac est vide d'équipements...</span>`;
     } else {
       bagItemsList.innerHTML = ''; 
-      
       items.forEach((item) => {
         const itemDiv = document.createElement('div');
         itemDiv.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: white; padding: 6px 10px; border-radius: 4px; border-left: 4px solid #888; font-size: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
@@ -342,54 +342,75 @@ export class UIManager {
         if (item.rarity === 'legendary') itemDiv.style.borderLeftColor = '#FF9800';
 
         let bonusText = '';
-        if (item.type === 'weapon') {
-          bonusText = `+${item.bonusAtk} ATK`;
-        } else if (item.type === 'armor') {
-          bonusText = `+${item.bonusDef} DEF`;
-        }
+        if (item.type === 'weapon') bonusText = `+${item.bonusAtk} ATK`;
+        else if (item.type === 'armor') bonusText = `+${item.bonusDef} DEF`;
+        else if (item.type === 'potion') bonusText = `+${item.healAmount} PV`;
 
         const infoSpan = document.createElement('span');
         infoSpan.innerHTML = `<strong>${item.name}</strong> <span style="color:#666; font-size:10px;">(${bonusText})</span>`;
         infoSpan.title = item.description;
         itemDiv.appendChild(infoSpan);
 
-        // Conteneur pour grouper nos deux boutons à droite
         const actionGroup = document.createElement('div');
         actionGroup.style.cssText = "display: flex; gap: 4px;";
 
-        // ⚔️ 1. Bouton Équiper
-        const equipBtn = document.createElement('button');
-        equipBtn.textContent = "Équiper";
-        equipBtn.style.cssText = "padding: 3px 8px; background: #37474F; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: bold;";
-        equipBtn.onclick = () => {
-          if (item.type === 'weapon') {
-            player.equipWeaponFromBag(item.id);
-            localStorage.setItem('rpg_player_weapon', JSON.stringify(player.equippedWeapon));
-          } else if (item.type === 'armor') {
-            player.equipArmorFromBag(item.id);
-            localStorage.setItem('rpg_player_armor', JSON.stringify(player.equippedArmor));
-          }
-          
-          // On sauvegarde le sac mis à jour (l'objet équipé en est sorti)
-          localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
-          this.engine.onLogCallback(`🔧 Vous avez équipé : **${item.name}**`);
-          this.updateUI();
-        };
+        const mainActionBtn = document.createElement('button');
+        mainActionBtn.style.cssText = "padding: 3px 8px; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; font-weight: bold;";
 
-        actionGroup.appendChild(equipBtn);
+        if (item.type === 'potion') {
+          mainActionBtn.textContent = "Boire";
+          mainActionBtn.style.background = "#9C27B0";
+          mainActionBtn.onclick = () => {
+            if (this.isStoryMode) {
+              if (this.storyManager.usePotion()) {
+                this.addLog(`🧪 Vous buvez **${item.name}** depuis votre sac et récupérez des PV !`);
+                this.updateUI();
+                if (this.currentScenario) this.showScenario(this.currentScenario);
+              } else {
+                this.addLog(`⚠️ Impossible d'utiliser la potion (PV déjà au max).`);
+              }
+            } else {
+              if (player.isAlive() && this.engine.enemy.isAlive()) {
+                this.engine.executePotionTurn();
+              } else {
+                if (player.usePotion()) {
+                  localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
+                  this.engine.onLogCallback(`🧪 Vous buvez **${item.name}** depuis votre sac et récupérez des PV !`);
+                  this.updateUI();
+                } else {
+                  this.engine.onLogCallback(`⚠️ Impossible de boire la potion (PV déjà au max).`);
+                }
+              }
+            }
+          };
+        } else {
+          mainActionBtn.textContent = "Équiper";
+          mainActionBtn.style.background = "#37474F";
+          mainActionBtn.onclick = () => {
+            if (item.type === 'weapon') {
+              player.equipWeaponFromBag(item.id);
+              localStorage.setItem('rpg_player_weapon', JSON.stringify(player.equippedWeapon));
+            } else if (item.type === 'armor') {
+              player.equipArmorFromBag(item.id);
+              localStorage.setItem('rpg_player_armor', JSON.stringify(player.equippedArmor));
+            }
+            localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
+            this.engine.onLogCallback(`🔧 Vous avez équipé : **${item.name}**`);
+            this.updateUI();
+          };
+        }
 
-        // 🗑️ 2. Bouton Jeter (Le nouveau venu !)
+        actionGroup.appendChild(mainActionBtn);
+
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = "🗑️";
         deleteBtn.style.cssText = "padding: 3px 6px; background: #EF5350; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;";
-        deleteBtn.title = "Détruire définitivement cet objet";
         deleteBtn.onclick = () => {
-          // Demande une petite confirmation rapide pour éviter les missclicks dramatiques
-          if (confirm(`Voulez-vous vraiment jeter votre "${item.name}" ? Il sera définitivement perdu.`)) {
+          if (confirm(`Voulez-vous vraiment jeter votre "${item.name}" ?`)) {
             player.removeItemFromBag(item.id);
             localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
-            this.engine.onLogCallback(`🗑️ Objet détruit : **${item.name}** a été retiré de votre sac.`);
-            this.updateUI(); // Rafraîchit l'affichage
+            this.engine.onLogCallback(`🗑️ Objet détruit : **${item.name}**`);
+            this.updateUI();
           }
         };
         actionGroup.appendChild(deleteBtn);
@@ -400,6 +421,7 @@ export class UIManager {
     }
   }
 
+  
   addLog(message: string) {
     const journal = document.getElementById('journal');
     if (!journal) return;
@@ -411,104 +433,70 @@ export class UIManager {
     this.currentScenario = scenario;
     this.isStoryMode = true;
     
-    const container = document.getElementById('actions-container') as HTMLElement;
-    const invContainer = document.getElementById('inventory-container') as HTMLElement;
-    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
-    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
+    const workspace = document.getElementById('game-workspace');
+    if (!workspace) return;
     
-    if (!container) return;
-    
-    // Masquer les éléments de combat
-    container.style.display = 'none';
-    invContainer.style.display = 'none';
-    bonusContainer.style.display = 'none';
-    if (nextCombatBtn) {
-      nextCombatBtn.style.display = 'none';
-      (nextCombatBtn as HTMLButtonElement).disabled = true;
-    }
-    
-    // Afficher le panneau de scénario
-    let scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
-    if (!scenarioPanel) {
-      scenarioPanel = document.createElement('div');
-      scenarioPanel.id = 'scenario-panel';
-      document.getElementById('app')?.appendChild(scenarioPanel);
-    }
-    
-    scenarioPanel.style.display = 'block';
-    
-    // Style spécial pour les scénarios de mort
     const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
-    
-    // Vérifier si le joueur a des potions
     const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
     
-    if (isDeathScenario) {
-      scenarioPanel.style.cssText = 'background: #FFEBEE; border: 3px solid #D32F2F; padding: 20px; border-radius: 8px; margin-top: 15px; text-align: center;';
-      scenarioPanel.innerHTML = `
-        <h2 style="margin: 0 0 15px 0; color: #D32F2F; font-size: 24px;">💀 ${scenario.title}</h2>
-        <p style="margin: 0 0 20px 0; color: #424242; line-height: 1.6; font-size: 16px;">${scenario.description}</p>
-        <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 10px; align-items: center;"></div>
-      `;
-    } else {
-      scenarioPanel.style.cssText = 'background: #E3F2FD; border: 2px solid #2196F3; padding: 15px; border-radius: 8px; margin-top: 15px;';
-      scenarioPanel.innerHTML = `
-        <h3 style="margin: 0 0 10px 0; color: #1565C0;">📖 ${scenario.title}</h3>
-        <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5;">${scenario.description}</p>
-        <div id="potion-button-container" style="margin-bottom: 15px;"></div>
+    // Style et rendu de l'histoire directement dans l'espace central
+    workspace.innerHTML = `
+      <div id="scenario-panel" style="${isDeathScenario ? 'background: #FFEBEE; border: 2px solid #D32F2F;' : 'background: #E3F2FD; border: 2px solid #2196F3;'} padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+        <h3 style="margin: 0 0 10px 0; color: ${isDeathScenario ? '#D32F2F' : '#1565C0'};">📖 ${scenario.title}</h3>
+        <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5; font-size: 14px;">${scenario.description}</p>
+        
+        ${!isDeathScenario ? '<div id="potion-button-container" style="margin-bottom: 15px;"></div>' : ''}
+        
         <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 8px;"></div>
-      `;
-      
-      // Ajouter le bouton de potion
+      </div>
+    `;
+
+    // Ajouter le bouton rapide d'utilisation de potion
+    if (!isDeathScenario) {
       const potionContainer = document.getElementById('potion-button-container')!;
       const potionBtn = document.createElement('button');
       potionBtn.textContent = '🧪 Utiliser une Potion';
       
       if (!hasPotion) {
-        potionBtn.style.cssText = 'padding: 10px 20px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; opacity: 0.6;';
+        potionBtn.style.cssText = 'width: 100%; padding: 10px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; opacity: 0.6;';
       } else {
-        potionBtn.style.cssText = 'padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;';
+        potionBtn.style.cssText = 'width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;';
         potionBtn.onmouseover = () => potionBtn.style.background = '#388E3C';
         potionBtn.onmouseout = () => potionBtn.style.background = '#4CAF50';
         potionBtn.onclick = () => {
           if (this.storyManager.usePotion()) {
             this.addLog('🧪 Vous utilisez une potion et récupérez des PV !');
             this.updateUI();
-            // Rafraîchir le scénario pour mettre à jour l'état du bouton
-            this.showScenario(scenario);
+            this.showScenario(scenario); // Re-rendre le scénario pour désactiver le bouton si plus de potions
           }
         };
       }
-      
       potionContainer.appendChild(potionBtn);
     }
-    
+
+    // Ajouter les choix d'action scénaristiques
     const choicesContainer = document.getElementById('scenario-choices')!;
     scenario.choices.forEach(choice => {
       const choiceBtn = document.createElement('button');
       choiceBtn.textContent = choice.text;
-      
-      // Vérifier si le choix est disponible
       const canMakeChoice = this.storyManager.canMakeChoice(choice);
       
       if (isDeathScenario) {
-        choiceBtn.style.cssText = 'padding: 15px 30px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; min-width: 200px;';
+        choiceBtn.style.cssText = 'padding: 12px; background: #D32F2F; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;';
         choiceBtn.onmouseover = () => choiceBtn.style.background = '#B71C1C';
         choiceBtn.onmouseout = () => choiceBtn.style.background = '#D32F2F';
       } else {
         if (!canMakeChoice) {
-          choiceBtn.style.cssText = 'padding: 12px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; text-align: left; opacity: 0.6;';
+          choiceBtn.style.cssText = 'padding: 10px; background: #E0E0E0; color: #9E9E9E; border: 1px dashed #BDBDBD; border-radius: 4px; font-weight: bold; cursor: not-allowed; text-align: left;';
         } else {
-          choiceBtn.style.cssText = 'padding: 12px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left;';
+          choiceBtn.style.cssText = 'padding: 10px; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: left; transition: 0.2s;';
           choiceBtn.onmouseover = () => choiceBtn.style.background = '#1976D2';
           choiceBtn.onmouseout = () => choiceBtn.style.background = '#2196F3';
         }
       }
       
       if (canMakeChoice) {
-        choiceBtn.onclick = () => {
-          this.storyManager.makeChoice(choice.id);
-        };
+        choiceBtn.onclick = () => this.storyManager.makeChoice(choice.id);
       }
       choicesContainer.appendChild(choiceBtn);
     });
@@ -518,23 +506,11 @@ export class UIManager {
 
   hideScenario() {
     this.isStoryMode = false;
-    const scenarioPanel = document.getElementById('scenario-panel') as HTMLElement;
-    if (scenarioPanel) {
-      scenarioPanel.style.display = 'none';
-    }
-    
-    // Réactiver les éléments de combat
-    const container = document.getElementById('actions-container') as HTMLElement;
-    const invContainer = document.getElementById('inventory-container') as HTMLElement;
-    const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
-    const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
-    
-    container.style.display = 'block';
-    invContainer.style.display = 'block';
-    bonusContainer.style.display = 'block';
-    if (nextCombatBtn) {
-      nextCombatBtn.style.display = 'block';
-      (nextCombatBtn as HTMLButtonElement).disabled = false;
+    // On nettoie le workspace qui va être reconstruit en mode combat par updateUI()
+    const workspace = document.getElementById('game-workspace');
+    if (workspace) {
+      workspace.innerHTML = '';
     }
   }
+
 }

@@ -160,14 +160,7 @@ export class CombatEngine {
       
       // Sauvegarde le sac mis à jour
       localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
-      
-      // Riposte directe de l'ennemi (boire une potion consomme le tour !)
-      if (this.enemy.isAlive()) {
-        const enemyMove = this.enemy.moves[Math.floor(Math.random() * this.enemy.moves.length)];
-        this.executeMove(this.enemy, this.player, enemyMove);
-      }
-      
-      this.checkBattleStatus();
+
       this.onUpdateUICallback();
     } else {
       this.onLogCallback(`⚠️ Impossible d'utiliser une potion (Sac vide ou PV déjà au max).`);

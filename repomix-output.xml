@@ -120,6 +120,175 @@ export class Monster implements Combatant {
 }
 </file>
 
+<file path="src/Skills.ts">
+import { Move } from './Character';
+
+// Dictionnaire des compétences déblocables selon le niveau du joueur
+export const skillCatalog: Record<number, Move> = {
+  2: { name: '🔥 Lance-Flamme', damage: 25, type: 'attack', accuracy: 85 },
+  3: { name: '🛡️ Peau de Pierre', damage: 35, type: 'heal', accuracy: 100 },
+  4: { name: '⚡ Éclair de Foudre', damage: 45, type: 'attack', accuracy: 75 },
+  5: { name: '🌟 Jugement Dernier', damage: 60, type: 'attack', accuracy: 90 }
+};
+
+// Fonction pour vérifier si une compétence est disponible pour un niveau précis
+export function getSkillForLevel(level: number): Move | null {
+  return skillCatalog[level] || null;
+}
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mon RPG 1v1</title>
+  </head>
+  <body>
+    <!-- C'est ici que l'UIManager va injecter le jeu -->
+    <div id="app"></div>
+    
+    <!-- On pointe vers le point d'entrée TypeScript -->
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+</file>
+
+<file path="LICENSE">
+MIT License
+
+Copyright (c) 2026 KevinKazama
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</file>
+
+<file path="package.json">
+{
+  "name": "project-rpg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KevinKazama/project-rpg.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KevinKazama/project-rpg/issues"
+  },
+  "homepage": "https://github.com/KevinKazama/project-rpg#readme"
+}
+</file>
+
+<file path="README.md">
+# project-rpg
+</file>
+
+<file path="src/Bestiary.ts">
+import { Monster } from './Monster';
+import { Move } from './Character';
+
+// 1. Liste de toutes les attaques possibles pour les monstres
+const monsterMoves: Record<string, Move[]> = {
+  goblin: [
+    { name: '🔪 Coup de Dague', damage: 10, type: 'attack', accuracy: 95 },
+    { name: '💨 Jet de Sable', damage: 5, type: 'attack', accuracy: 100 },
+    { name: '🧪 Potion Volée', damage: 15, type: 'heal', accuracy: 100 }
+  ],
+  orc: [
+    { name: '🪓 Coup de Hache', damage: 25, type: 'attack', accuracy: 70 },
+    { name: '💥 Fracas', damage: 16, type: 'attack', accuracy: 90 }
+  ],
+  ghost: [
+    { name: '👻 Hantise', damage: 14, type: 'attack', accuracy: 95 },
+    { name: '🔮 Vol de Vie', damage: 12, type: 'attack', accuracy: 85 },
+    { name: '🌌 Brume Spectrale', damage: 20, type: 'heal', accuracy: 100 }
+  ],
+  dragon: [
+    { name: '🔥 Souffle Ardent', damage: 35, type: 'attack', accuracy: 75 },
+    { name: '🐾 Écrasement', damage: 20, type: 'attack', accuracy: 90 }
+  ]
+};
+
+// 2. Définition des fiches de statistiques de base des monstres (Niveau 1)
+interface MonsterTemplate {
+  name: string;
+  hp: number;
+  attack: number;
+  defense: number;
+  speed: number;
+  moves: Move[];
+}
+
+const templates: MonsterTemplate[] = [
+  { name: 'Gobelin Chapardeur', hp: 70, attack: 7, defense: 5, speed: 18, moves: monsterMoves.goblin },
+  { name: 'Orque Enragé', hp: 140, attack: 12, defense: 5, speed: 7, moves: monsterMoves.orc },
+  { name: 'Spectre Errant', hp: 90, attack: 9, defense: 4, speed: 12, moves: monsterMoves.ghost },
+  { name: 'Jeune Dragonnet', hp: 180, attack: 15, defense: 8, speed: 11, moves: monsterMoves.dragon }
+];
+
+// 3. Fonction pour générer un monstre aléatoire mis à l'échelle du niveau du joueur
+export function getRandomMonster(playerLevel: number): Monster {
+  const randomIndex = Math.floor(Math.random() * templates.length);
+  const template = templates[randomIndex];
+
+  // On crée une vraie instance de Monster basée sur le modèle pioché
+  return new Monster(
+    template.name,
+    template.hp,
+    template.attack,
+    template.defense || 5,
+    template.speed,
+    template.moves,
+    playerLevel // Le monstre s'adapte direct au niveau du joueur !
+  );
+}
+
+// 4. Fonction pour générer un monstre spécifique par type
+export function getMonsterByType(enemyType: 'goblin' | 'orc' | 'ghost' | 'dragon', playerLevel: number): Monster {
+  const typeIndex: Record<string, number> = {
+    'goblin': 0,
+    'orc': 1,
+    'ghost': 2,
+    'dragon': 3
+  };
+
+  const template = templates[typeIndex[enemyType]];
+
+  return new Monster(
+    template.name,
+    template.hp,
+    template.attack,
+    template.defense || 5,
+    template.speed,
+    template.moves,
+    playerLevel
+  );
+}
+</file>
+
 <file path="src/Scenario.ts">
 export interface Choice {
   id: string;
@@ -150,23 +319,6 @@ export interface Scenario {
 }
 
 export type ScenarioMap = Record<string, Scenario>;
-</file>
-
-<file path="src/Skills.ts">
-import { Move } from './Character';
-
-// Dictionnaire des compétences déblocables selon le niveau du joueur
-export const skillCatalog: Record<number, Move> = {
-  2: { name: '🔥 Lance-Flamme', damage: 25, type: 'attack', accuracy: 85 },
-  3: { name: '🛡️ Peau de Pierre', damage: 35, type: 'heal', accuracy: 100 },
-  4: { name: '⚡ Éclair de Foudre', damage: 45, type: 'attack', accuracy: 75 },
-  5: { name: '🌟 Jugement Dernier', damage: 60, type: 'attack', accuracy: 90 }
-};
-
-// Fonction pour vérifier si une compétence est disponible pour un niveau précis
-export function getSkillForLevel(level: number): Move | null {
-  return skillCatalog[level] || null;
-}
 </file>
 
 <file path="src/StoryDatabase.ts">
@@ -948,158 +1100,6 @@ export function createPotion(healAmount: number = 40): Potion {
     healAmount: healAmount,
     description: 'Une potion de soin standard.'
   };
-}
-</file>
-
-<file path="index.html">
-<!DOCTYPE html>
-<html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mon RPG 1v1</title>
-  </head>
-  <body>
-    <!-- C'est ici que l'UIManager va injecter le jeu -->
-    <div id="app"></div>
-    
-    <!-- On pointe vers le point d'entrée TypeScript -->
-    <script type="module" src="/src/main.ts"></script>
-  </body>
-</html>
-</file>
-
-<file path="LICENSE">
-MIT License
-
-Copyright (c) 2026 KevinKazama
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-</file>
-
-<file path="package.json">
-{
-  "name": "project-rpg",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/KevinKazama/project-rpg.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/KevinKazama/project-rpg/issues"
-  },
-  "homepage": "https://github.com/KevinKazama/project-rpg#readme"
-}
-</file>
-
-<file path="README.md">
-# project-rpg
-</file>
-
-<file path="src/Bestiary.ts">
-import { Monster } from './Monster';
-import { Move } from './Character';
-
-// 1. Liste de toutes les attaques possibles pour les monstres
-const monsterMoves: Record<string, Move[]> = {
-  goblin: [
-    { name: '🔪 Coup de Dague', damage: 10, type: 'attack', accuracy: 95 },
-    { name: '💨 Jet de Sable', damage: 5, type: 'attack', accuracy: 100 },
-    { name: '🧪 Potion Volée', damage: 15, type: 'heal', accuracy: 100 }
-  ],
-  orc: [
-    { name: '🪓 Coup de Hache', damage: 25, type: 'attack', accuracy: 70 },
-    { name: '💥 Fracas', damage: 16, type: 'attack', accuracy: 90 }
-  ],
-  ghost: [
-    { name: '👻 Hantise', damage: 14, type: 'attack', accuracy: 95 },
-    { name: '🔮 Vol de Vie', damage: 12, type: 'attack', accuracy: 85 },
-    { name: '🌌 Brume Spectrale', damage: 20, type: 'heal', accuracy: 100 }
-  ],
-  dragon: [
-    { name: '🔥 Souffle Ardent', damage: 35, type: 'attack', accuracy: 75 },
-    { name: '🐾 Écrasement', damage: 20, type: 'attack', accuracy: 90 }
-  ]
-};
-
-// 2. Définition des fiches de statistiques de base des monstres (Niveau 1)
-interface MonsterTemplate {
-  name: string;
-  hp: number;
-  attack: number;
-  defense: number;
-  speed: number;
-  moves: Move[];
-}
-
-const templates: MonsterTemplate[] = [
-  { name: 'Gobelin Chapardeur', hp: 70, attack: 7, defense: 5, speed: 18, moves: monsterMoves.goblin },
-  { name: 'Orque Enragé', hp: 140, attack: 12, defense: 5, speed: 7, moves: monsterMoves.orc },
-  { name: 'Spectre Errant', hp: 90, attack: 9, defense: 4, speed: 12, moves: monsterMoves.ghost },
-  { name: 'Jeune Dragonnet', hp: 180, attack: 15, defense: 8, speed: 11, moves: monsterMoves.dragon }
-];
-
-// 3. Fonction pour générer un monstre aléatoire mis à l'échelle du niveau du joueur
-export function getRandomMonster(playerLevel: number): Monster {
-  const randomIndex = Math.floor(Math.random() * templates.length);
-  const template = templates[randomIndex];
-
-  // On crée une vraie instance de Monster basée sur le modèle pioché
-  return new Monster(
-    template.name,
-    template.hp,
-    template.attack,
-    template.defense || 5,
-    template.speed,
-    template.moves,
-    playerLevel // Le monstre s'adapte direct au niveau du joueur !
-  );
-}
-
-// 4. Fonction pour générer un monstre spécifique par type
-export function getMonsterByType(enemyType: 'goblin' | 'orc' | 'ghost' | 'dragon', playerLevel: number): Monster {
-  const typeIndex: Record<string, number> = {
-    'goblin': 0,
-    'orc': 1,
-    'ghost': 2,
-    'dragon': 3
-  };
-
-  const template = templates[typeIndex[enemyType]];
-
-  return new Monster(
-    template.name,
-    template.hp,
-    template.attack,
-    template.defense || 5,
-    template.speed,
-    template.moves,
-    playerLevel
-  );
 }
 </file>
 
@@ -1931,8 +1931,10 @@ export class UIManager {
     // Met à jour le compteur de potions
     const potionCountSpan = document.getElementById('potion-count')!;
     const invContainer = document.getElementById('inventory-container')!;
-    potionCountSpan.textContent = this.engine.player.inventory.potions.toString();
-
+    // potionCountSpan.textContent = this.engine.player.inventory.potions.toString();
+    const potionCount = this.engine.player.inventory.items.filter(item => item.type === 'potion').length;
+    potionCountSpan.textContent = potionCount.toString();
+  
 
     // 🔀 LOGIQUE D'AFFICHAGE DES PANNEAUX
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {

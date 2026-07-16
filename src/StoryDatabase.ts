@@ -43,7 +43,7 @@ export const STORY_DATABASE: ScenarioMap = {
           enemyLevel: 1,
           enemyType: 'goblin',
           description: 'Un gobelin chapardeur vous attaque !',
-          xpReward: 50,
+          xpReward: 40,
           nextScenarioId: 'forest_village'
         }
       },
@@ -239,7 +239,7 @@ export const STORY_DATABASE: ScenarioMap = {
         text: '⚔️ Combattre le dragonnet',
         consequence: {
           type: 'combat',
-          enemyLevel: 4,
+          enemyLevel: 1,
           enemyType: 'dragon',
           description: 'Un jeune dragonnet vous défie !',
           xpReward: 200,

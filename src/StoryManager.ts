@@ -271,6 +271,11 @@ export class StoryManager {
   }
 
   usePotion(): boolean {
-    return this.player.usePotion();
+  const used = this.player.usePotion();
+    if (used) {
+      // Sauvegarder l'état du sac après utilisation
+      localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+    }
+    return used;
   }
 }
