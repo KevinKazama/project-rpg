@@ -1,7 +1,7 @@
 import { Character, Combatant, Move } from './Character';
 import { Monster } from './Monster';
 import { getRandomMonster } from './Bestiary';
-import { getRandomEquipmentLoot } from './Stuff';
+import { getEquipmentLoot } from './Stuff';
 import { StoryManager } from './StoryManager';
 
 export class CombatEngine {
@@ -76,52 +76,54 @@ export class CombatEngine {
 
   isChoosingBonus: boolean = false;
 
-  private checkBattleStatus() {
+private checkBattleStatus() {
     if (!this.player.isAlive()) {
       this.onLogCallback(`❌ **K.O.** ! ${this.player.name} a perdu le combat...`);
       
-      // Si on est en mode histoire, notifier le StoryManager
       if (this.storyManager) {
         this.storyManager.onCombatDefeat();
       }
     } else if (!this.enemy.isAlive()) {
       this.onLogCallback(`🏆 **VICTOIRE** ! ${this.enemy.name} a mordu la poussière !`);
      
-      if (Math.random() < 0.30) {
-        const newPotion = getRandomEquipmentLoot(this.enemy.level);
-        if (newPotion && newPotion.type === 'potion') {
-          this.player.addItemToInventory(newPotion);
-          this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
-          localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
-        }
-      }
+      // 🎯 ON NE GÉNÈRE LE LOOT ALÉATOIRE QUE SI LE COMBAT N'EST PAS LIÉ À UN SCÉNARIO PRÉVU
+      // Pour savoir si on est dans l'histoire, on vérifie si le scénario actuel attend un combat
+      const isStoryCombat = this.storyManager && this.storyManager.getCurrentScenario()?.id.includes('combat');
 
-      if (Math.random() < 0.95) {
-        // Appellera notre nouvelle fonction générique (pense à l'importer en haut si besoin)
-        const newLoot = getRandomEquipmentLoot(this.enemy.level); 
-
-        if (newLoot) {
-          const addedSuccessfully = this.player.addItemToInventory(newLoot);
-          
-          if (addedSuccessfully) {
-            const rarityStars = newLoot.rarity === 'legendary' ? '✨✨' : '';
-            const typeLabel = newLoot.type === 'weapon' ? 'ARME' : 'ARMURE';
-            
-            this.onLogCallback(`\n🎒 **BUTIN AJOUTÉ AU SAC (${newLoot.rarity.toUpperCase()})** ${rarityStars}`);
-            this.onLogCallback(` Vous avez trouvé une ${typeLabel} : **${newLoot.name}** !`);
-            this.onLogCallback(` *"${newLoot.description}"* \n`);
-            
+      if (!isStoryCombat) {
+        // --- LOOT DE COMBAT ALÉATOIRE CLASSIQUE ---
+        if (Math.random() < 0.30) {
+          const newPotion = getEquipmentLoot(this.enemy.level, 'p_health_small'); // ou votre ancienne logique
+          if (newPotion && newPotion.type === 'potion') {
+            this.player.addItemToInventory(newPotion);
+            this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
             localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
-          } else {
-            this.onLogCallback(`\n⚠️ **SAC PLEIN !** Tu as trouvé **${newLoot.name}** mais ton sac à dos est plein.`);
           }
+        }
 
-          if (this.onUpdateUICallback) {
-            this.onUpdateUICallback();
+        if (Math.random() < 0.95) {
+          const newLoot = getEquipmentLoot(this.enemy.level); // Génération aléatoire sans ID ciblé
+
+          if (newLoot) {
+            const addedSuccessfully = this.player.addItemToInventory(newLoot);
+            
+            if (addedSuccessfully) {
+              const rarityStars = newLoot.rarity === 'legendary' ? '✨✨' : '';
+              const typeLabel = newLoot.type === 'weapon' ? 'ARME' : 'ARMURE';
+              
+              this.onLogCallback(`\n🎒 **BUTIN AJOUTÉ AU SAC (${newLoot.rarity.toUpperCase()})** ${rarityStars}`);
+              this.onLogCallback(` Vous avez trouvé une ${typeLabel} : **${newLoot.name}** !`);
+              this.onLogCallback(` *"${newLoot.description}"* \n`);
+              
+              localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
+            } else {
+              this.onLogCallback(`\n⚠️ **SAC PLEIN !** Tu as trouvé **${newLoot.name}** mais ton sac à dos est plein.`);
+            }
           }
         }
       }
 
+      // --- EXPÉRIENCE ET STATS (Toujours actif) ---
       const xpGained = this.enemy.level * 50;
       const xpResult = this.player.gainXp(xpGained);
       xpResult.logs.forEach(log => this.onLogCallback(log));
@@ -131,16 +133,18 @@ export class CombatEngine {
         this.onLogCallback(`🎁 Choisissez une récompense de niveau !`);
       }
 
-      // Sauvegarde immédiate du niveau et de l'XP
+      // Sauvegarde des données du joueur
       localStorage.setItem('rpg_player_level', this.player.level.toString());
       localStorage.setItem('rpg_player_xp', this.player.xp.toString());
-      // On sauvegarde aussi les stats de base qui ont pu changer via les bonus précédents
       localStorage.setItem('rpg_player_base_hp', this.player.baseMaxHp.toString());
       localStorage.setItem('rpg_player_base_atk', this.player.baseAttack.toString());
       
-      // Si on est en mode histoire, notifier le StoryManager
-      if (this.storyManager) {
-        this.storyManager.onCombatVictory();
+      // ⚠️ DÉCLENCHEMENT SÉCURISÉ : 
+      // Si c'est un combat hors-scénario (entraînement, combat libre), 
+      // on doit forcer la création d'un nouveau combat directement, sinon le jeu se bloque.
+      if (!isStoryCombat) {
+        // Optionnel : vous pouvez laisser l'UI afficher un bouton "Continuer" pour lancer le prochain combat libre
+        // ou appeler startNewCombat() après un court instant.
       }
     }
   }

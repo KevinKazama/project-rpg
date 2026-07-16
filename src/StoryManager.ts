@@ -3,7 +3,7 @@ import { Scenario, Choice, ScenarioConsequence } from './Scenario';
 import { STORY_DATABASE } from './StoryDatabase';
 import { getRandomMonster, getMonsterByType } from './Bestiary';
 import { Monster } from './Monster';
-import { getRandomEquipmentLoot } from './Stuff';
+import { getEquipmentLoot } from './Stuff';
 import { Equipment } from './Stuff';
 
 export class StoryManager {
@@ -39,13 +39,35 @@ export class StoryManager {
       return;
     }
 
+    const consequence = choice.consequence;
+    if (!consequence) return;
+
+    // 🎒 Gestion simplifiée grâce à la fonction centralisée
+    if (consequence.type === 'reward' && consequence.itemReward) {
+      const player = this.player;
+      
+      // On demande un loot ciblé sur l'ID de la récompense
+      const uniqueItem = getEquipmentLoot(player.level, consequence.itemReward);
+
+      if (uniqueItem) {
+        const added = player.addItemToInventory(uniqueItem);
+
+        if (added) {
+          localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
+          this.onLog(`🎁 **Butin obtenu** : Vous avez reçu **${uniqueItem.name}** !`);
+        } else {
+          this.onLog(`⚠️ **Sac plein !** Vous avez trouvé **${uniqueItem.name}** mais votre inventaire est complet.`);
+        }
+      }
+    }
+
     // Vérifier si le choix est disponible (offrande avec objet requis)
     if (choice.consequence.type === 'offer' && !this.canMakeChoice(choice)) {
       this.onLog(`⚠️ **Impossible** : Vous n'avez pas l'objet requis.`);
       return;
     }
 
-    this.applyConsequence(choice.consequence);
+    this.applyConsequence(consequence);
   }
 
   canMakeChoice(choice: Choice): boolean {
@@ -152,7 +174,7 @@ export class StoryManager {
     }
     
     if (consequence.itemReward) {
-      const loot = getRandomEquipmentLoot(this.player.level);
+      const loot = getEquipmentLoot(this.player.level);
       if (loot) {
         this.player.addItemToInventory(loot);
         this.onLog(`🎒 **Objet trouvé** : ${loot.name}`);

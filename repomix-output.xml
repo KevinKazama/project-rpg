@@ -1670,23 +1670,29 @@ export class UIManager {
   init(engine: CombatEngine, onActionSelected: (move: Move) => void, storyManager: StoryManager) {
     this.engine = engine;
     this.storyManager = storyManager;
-    this.setupHTMLStructure();
-    this.renderButtons(onActionSelected);
-    this.setupBonusEvents();
-    this.updateUI();
     
-    // Initialiser le premier scénario
-    this.showScenario(storyManager.getCurrentScenario());
+    // 1. On injecte la structure de base
+    this.setupHTMLStructure();
+    
+    // 2. On configure les bonus
+    this.setupBonusEvents();
+    
+    // 3. On démarre directement en mode histoire
+    this.isStoryMode = true;
+    this.currentScenario = storyManager.getCurrentScenario();
+    
+    // 4. On affiche le scénario et rafraîchit l'UI
+    this.showScenario(this.currentScenario);
+    this.updateUI();
   }
 
-
-private setupHTMLStructure() {
+  private setupHTMLStructure() {
     const app = document.getElementById('app');
     if (!app) return;
 
     app.innerHTML = `
       <div style="font-family: sans-serif; max-width: 500px; margin: 20px auto; border: 2px solid #333; padding: 20px; border-radius: 8px; background: #f9f9f9; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <!-- Zone Infos Joueur (Inchangée) -->
+        <!-- Zone Infos Joueur -->
         <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <strong id="p-level" style="color: #2196F3; font-size: 16px;">Niveau 1</strong>
@@ -1712,11 +1718,9 @@ private setupHTMLStructure() {
         </div> 
 
         <!-- ================= Espace de travail central (Combat ou Scénario) ================= -->
-        <div id="game-workspace">
-          <!-- Ce bloc contiendra soit l'écran de combat, soit l'écran de scénario -->
-        </div>
+        <div id="game-workspace"></div>
 
-        <!-- Sac à dos (Toujours visible et accessible !) -->
+        <!-- Sac à dos (Toujours visible) -->
         <div id="bag-container" style="margin-top: 15px; background: #ECEFF1; border: 1px solid #B0BEC5; padding: 12px; border-radius: 6px;">
           <h4 style="margin: 0 0 8px 0; color: #37474F; display: flex; justify-content: space-between;">
             <span>🎒 Contenu du Sac à dos</span>
@@ -1734,66 +1738,60 @@ private setupHTMLStructure() {
       </div>
     `;
 
-    document.getElementById('reset-btn')!.onclick = () => {
-      localStorage.clear();
-      localStorage.setItem('rpg_player_level', '1');
-      localStorage.setItem('rpg_player_xp', '0');
-      localStorage.setItem('rpg_player_base_hp', '100');
-      localStorage.setItem('rpg_player_base_atk', '10');
-      localStorage.removeItem('rpg_player_weapon');
-      localStorage.removeItem('rpg_player_armor');
-      localStorage.removeItem('rpg_player_moves');
-      localStorage.removeItem('rpg_player_bag');
-      window.location.reload();
-    };
-
-    document.getElementById('next-combat-btn')!.onclick = () => {
-      this.engine.startNewCombat();
-    };
-
-    document.getElementById('use-potion-btn')!.onclick = () => {
-      if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
-        this.engine.executePotionTurn();
-      }
-    };
-
+    // Reset du LocalStorage (seul bouton garanti présent dans le HTML ci-dessus)
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        localStorage.clear();
+        localStorage.setItem('rpg_player_level', '1');
+        localStorage.setItem('rpg_player_xp', '0');
+        localStorage.setItem('rpg_player_base_hp', '100');
+        localStorage.setItem('rpg_player_base_atk', '10');
+        localStorage.removeItem('rpg_player_weapon');
+        localStorage.removeItem('rpg_player_armor');
+        localStorage.removeItem('rpg_player_moves');
+        localStorage.removeItem('rpg_player_bag');
+        window.location.reload();
+      };
+    }
   }
 
-
-
-  // Connecte les clics des boutons de bonus aux fonctions de statistiques
   private setupBonusEvents() {
-    document.getElementById('bonus-hp-btn')!.onclick = () => {
-      this.engine.player.applyHpBonus();
-      this.selectBonusFinished("En route pour la vitalité ! +25 PV Max.");
-    };
+    const hpBtn = document.getElementById('bonus-hp-btn');
+    const atkBtn = document.getElementById('bonus-atk-btn');
+    const skillBtn = document.getElementById('bonus-skill-btn');
 
-    document.getElementById('bonus-atk-btn')!.onclick = () => {
-      this.engine.player.applyAttackBonus();
-      this.selectBonusFinished("La force brute augmente ! +5 Attaque.");
-    };
+    if (hpBtn) {
+      hpBtn.onclick = () => {
+        this.engine.player.applyHpBonus();
+        this.selectBonusFinished("En route pour la vitalité ! +25 PV Max.");
+      };
+    }
 
-    const skillBtn = document.getElementById('bonus-skill-btn')!;
-    skillBtn.onclick = () => {
-      const nextSkill = getSkillForLevel(this.engine.player.level);
-      if (nextSkill) {
-        this.engine.player.learnMove(nextSkill);
+    if (atkBtn) {
+      atkBtn.onclick = () => {
+        this.engine.player.applyAttackBonus();
+        this.selectBonusFinished("La force brute augmente ! +5 Attaque.");
+      };
+    }
 
-        // Sauvegarde de la nouvelle liste d'attaques sous forme de texte JSON
-        localStorage.setItem('rpg_player_moves', JSON.stringify(this.engine.player.moves));
-
-        this.renderButtons((move) => this.engine.executeRound(move)); // Recrée les boutons de combat avec la nouvelle attaque
-        this.selectBonusFinished(`Nouveau sort appris : ${nextSkill.name} !`);
-      }
-    };
+    if (skillBtn) {
+      skillBtn.onclick = () => {
+        const nextSkill = getSkillForLevel(this.engine.player.level);
+        if (nextSkill) {
+          this.engine.player.learnMove(nextSkill);
+          localStorage.setItem('rpg_player_moves', JSON.stringify(this.engine.player.moves));
+          this.renderButtons((move) => this.engine.executeRound(move));
+          this.selectBonusFinished(`Nouveau sort appris : ${nextSkill.name} !`);
+        }
+      };
+    }
   }
 
-  // Clôture le choix de bonus et repasse la main au bouton de combat suivant
   private selectBonusFinished(logMessage: string) {
     this.engine.isChoosingBonus = false;
-    this.addLog(`✨ **Bonus choisi** : ${logMessage}`);
+    this.addLog(`` + `✨ **Bonus choisi** : ${logMessage}`);
     
-    // On re-sauvegarde le changement de statistiques
     localStorage.setItem('rpg_player_base_hp', this.engine.player.baseMaxHp.toString());
     localStorage.setItem('rpg_player_base_atk', this.engine.player.baseAttack.toString());
 
@@ -1820,13 +1818,16 @@ private setupHTMLStructure() {
     const workspace = document.getElementById('game-workspace');
     if (!workspace) return;
 
-    // Si nous sommes en mode histoire, on ne dessine pas l'interface de combat par-dessus
+    // Si on est en mode histoire, on bloque l'affichage de combat et on s'assure que l'histoire est là
     if (this.isStoryMode) {
-      this.updateBagUI(); // Mettre quand même à jour le sac à dos
+      this.updateBagUI();
+      if (this.currentScenario && !document.getElementById('scenario-panel')) {
+        this.showScenario(this.currentScenario);
+      }
       return;
     }
 
-    // 1. Si l'arène de combat n'est pas encore dessinée dans le workspace, on l'y met !
+    // 1. Injection de la scène de combat si absente du DOM
     if (!document.getElementById('p-bar')) {
       workspace.innerHTML = `
         <!-- Zone Combat -->
@@ -1873,11 +1874,14 @@ private setupHTMLStructure() {
         </button>
       `;
 
-      // Ré-attacher les événements des boutons
+      // Liaison sécurisée des boutons après leur création
       this.setupBonusEvents();
-      document.getElementById('next-combat-btn')!.onclick = () => {
-        this.engine.startNewCombat();
-      };
+      
+      const nextBtn = document.getElementById('next-combat-btn');
+      if (nextBtn) {
+        nextBtn.onclick = () => this.engine.startNewCombat();
+      }
+      
       this.renderButtons((move) => this.engine.executeRound(move));
     }
 
@@ -1906,28 +1910,26 @@ private setupHTMLStructure() {
     pLevel.textContent = `⭐ Niveau ${this.engine.player.level}`;
     pStatsText.textContent = `ATK: ${baseAtk + weaponBonus} | DEF: ${baseDef + defenseBonus} | PV Max: ${this.engine.player.maxHp}`;
 
-    // Arme & Armure text update (Inchangé)
     const pWeaponText = document.getElementById('player-weapon')!;
-    if (pWeaponText) {
-      if (this.engine.player.equippedWeapon) {
-        const weapon = this.engine.player.equippedWeapon;
-        pWeaponText.textContent = `⚔️ ${weapon.name} [${weapon.rarity.toUpperCase()}]`;
-        pWeaponText.title = weapon.description;
-      } else { pWeaponText.textContent = `✋ À mains nues`; }
+    if (this.engine.player.equippedWeapon) {
+      const weapon = this.engine.player.equippedWeapon;
+      pWeaponText.textContent = `⚔️ ${weapon.name} [${weapon.rarity.toUpperCase()}]`;
+      pWeaponText.title = weapon.description;
+    } else { 
+      pWeaponText.textContent = `✋ À mains nues`; 
     }
 
     const pArmorText = document.getElementById('player-armor')!;
-    if (pArmorText) {
-      if (this.engine.player.equippedArmor) {
-        const armor = this.engine.player.equippedArmor;
-        pArmorText.textContent = `🛡️ ${armor.name} [${armor.rarity.toUpperCase()}]`;
-        pArmorText.title = armor.description;
-      } else { pArmorText.textContent = `🛡️ Vêtements de civil`; }
+    if (this.engine.player.equippedArmor) {
+      const armor = this.engine.player.equippedArmor;
+      pArmorText.textContent = `🛡️ ${armor.name} [${armor.rarity.toUpperCase()}]`;
+      pArmorText.title = armor.description;
+    } else { 
+      pArmorText.textContent = `🛡️ Vêtements de civil`; 
     }
 
     eLevel.textContent = this.engine.enemy.level.toString();
 
-    // XP & HP calculations (Inchangé)
     const xpNeeded = this.engine.player.getXpNeededForNextLevel();
     pXpBar.style.width = `${(this.engine.player.xp / xpNeeded) * 100}%`;
     pXpText.textContent = `${this.engine.player.xp}/${xpNeeded}`;
@@ -1940,14 +1942,17 @@ private setupHTMLStructure() {
     pHp.textContent = `${this.engine.player.hp}/${this.engine.player.maxHp} PV`;
     eHp.textContent = `${this.engine.enemy.hp}/${this.engine.enemy.maxHp} PV`;
 
-    // Visibilité des éléments de combat
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
+      // Le combat est en cours
       actionsContainer.style.display = 'grid';
       bonusContainer.style.display = 'none';
       nextCombatBtn.style.display = 'none';
     } else {
+      // Le combat est terminé
       actionsContainer.style.display = 'none';
+      
       if (this.engine.isChoosingBonus) {
+        // Option A : Le joueur vient de monter de niveau et doit choisir un bonus
         bonusContainer.style.display = 'block';
         nextCombatBtn.style.display = 'none';
         const availableSkill = getSkillForLevel(this.engine.player.level);
@@ -1959,15 +1964,32 @@ private setupHTMLStructure() {
           skillBtn.style.display = 'none';
         }
       } else {
+        // Option B : Le combat est gagné (ou perdu) et on attend la transition
         bonusContainer.style.display = 'none';
         nextCombatBtn.style.display = 'block';
+        
+        // Si nous sommes dans un combat lié à l'histoire (Story Mode imminent au clic)
+        if (this.storyManager && this.engine.player.isAlive()) {
+          nextCombatBtn.textContent = "➡️ Continuer l'aventure";
+          nextCombatBtn.style.background = "#2196F3"; // Bleu aventure au lieu de vert combat
+          nextCombatBtn.onclick = () => {
+            // On déclenche la transition vers le scénario suivant ici !
+            const nextScenario = this.storyManager.getCurrentScenario();
+            this.showScenario(nextScenario);
+            this.updateUI();
+          };
+        } else {
+          // Mode combat classique infini si l'histoire est finie ou indisponible
+          nextCombatBtn.textContent = "⚔️ Commencer un Nouveau Combat";
+          nextCombatBtn.style.background = "#4CAF50";
+          nextCombatBtn.onclick = () => this.engine.startNewCombat();
+        }
       }
     }
 
     this.updateBagUI();
   }
 
-  // J'isole le rendu du sac à dos pour pouvoir l'appeler indépendamment
   private updateBagUI() {
     const bagSlots = document.getElementById('bag-slots')!;
     const bagItemsList = document.getElementById('bag-items-list')!;
@@ -2077,7 +2099,6 @@ private setupHTMLStructure() {
     }
   }
 
-  
   addLog(message: string) {
     const journal = document.getElementById('journal');
     if (!journal) return;
@@ -2095,7 +2116,6 @@ private setupHTMLStructure() {
     const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
     const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
     
-    // Style et rendu de l'histoire directement dans l'espace central
     workspace.innerHTML = `
       <div id="scenario-panel" style="${isDeathScenario ? 'background: #FFEBEE; border: 2px solid #D32F2F;' : 'background: #E3F2FD; border: 2px solid #2196F3;'} padding: 15px; border-radius: 8px; margin-bottom: 15px;">
         <h3 style="margin: 0 0 10px 0; color: ${isDeathScenario ? '#D32F2F' : '#1565C0'};">📖 ${scenario.title}</h3>
@@ -2107,7 +2127,6 @@ private setupHTMLStructure() {
       </div>
     `;
 
-    // Ajouter le bouton rapide d'utilisation de potion
     if (!isDeathScenario) {
       const potionContainer = document.getElementById('potion-button-container')!;
       const potionBtn = document.createElement('button');
@@ -2123,14 +2142,13 @@ private setupHTMLStructure() {
           if (this.storyManager.usePotion()) {
             this.addLog('🧪 Vous utilisez une potion et récupérez des PV !');
             this.updateUI();
-            this.showScenario(scenario); // Re-rendre le scénario pour désactiver le bouton si plus de potions
+            this.showScenario(scenario);
           }
         };
       }
       potionContainer.appendChild(potionBtn);
     }
 
-    // Ajouter les choix d'action scénaristiques
     const choicesContainer = document.getElementById('scenario-choices')!;
     scenario.choices.forEach(choice => {
       const choiceBtn = document.createElement('button');
@@ -2162,13 +2180,11 @@ private setupHTMLStructure() {
 
   hideScenario() {
     this.isStoryMode = false;
-    // On nettoie le workspace qui va être reconstruit en mode combat par updateUI()
     const workspace = document.getElementById('game-workspace');
     if (workspace) {
       workspace.innerHTML = '';
     }
   }
-
 }
 </file>
 

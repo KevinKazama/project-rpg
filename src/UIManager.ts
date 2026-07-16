@@ -10,6 +10,8 @@ export class UIManager {
   private storyManager!: StoryManager;
   private currentScenario: Scenario | null = null;
   private isStoryMode: boolean = false;
+  // 📚 Variable pour stocker l'historique complet des logs de la session active
+  private logHistory: string[] = ["Le combat commence ! Choisissez une action."];
 
   init(engine: CombatEngine, onActionSelected: (move: Move) => void, storyManager: StoryManager) {
     this.engine = engine;
@@ -82,7 +84,7 @@ export class UIManager {
       </div>
     `;
 
-    // Reset du LocalStorage (seul bouton garanti présent dans le HTML ci-dessus)
+    // Reset du LocalStorage
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) {
       resetBtn.onclick = () => {
@@ -134,7 +136,7 @@ export class UIManager {
 
   private selectBonusFinished(logMessage: string) {
     this.engine.isChoosingBonus = false;
-    this.addLog(`` + `✨ **Bonus choisi** : ${logMessage}`);
+    this.addLog(`✨ **Bonus choisi** : ${logMessage}`);
     
     localStorage.setItem('rpg_player_base_hp', this.engine.player.baseMaxHp.toString());
     localStorage.setItem('rpg_player_base_atk', this.engine.player.baseAttack.toString());
@@ -193,9 +195,9 @@ export class UIManager {
           </div>
         </div>
 
-        <!-- Journal de combat -->
+        <!-- Journal de combat (Restauré à partir de l'historique) -->
         <div id="journal" style="height: 120px; overflow-y: auto; background: #222; color: #fff; padding: 10px; font-size: 14px; border-radius: 4px; margin-bottom: 20px; line-height: 1.4;">
-          Le combat commence ! Choisissez une action.
+          ${this.logHistory.join('<br>')}
         </div>
 
         <!-- Panneau d'actions de Combat -->
@@ -218,7 +220,7 @@ export class UIManager {
         </button>
       `;
 
-      // Liaison sécurisée des boutons après leur création
+      // Liaison des événements
       this.setupBonusEvents();
       
       const nextBtn = document.getElementById('next-combat-btn');
@@ -227,6 +229,10 @@ export class UIManager {
       }
       
       this.renderButtons((move) => this.engine.executeRound(move));
+
+      // Auto-scroll du journal vers le bas à l'apparition de l'UI de combat
+      const journal = document.getElementById('journal');
+      if (journal) journal.scrollTop = journal.scrollHeight;
     }
 
     // --- MISE À JOUR DES VALEURS DU COMBAT ---
@@ -286,13 +292,14 @@ export class UIManager {
     pHp.textContent = `${this.engine.player.hp}/${this.engine.player.maxHp} PV`;
     eHp.textContent = `${this.engine.enemy.hp}/${this.engine.enemy.maxHp} PV`;
 
+// --- GESTION DES PANNEAUX ET DES BOUTONS DE TRANSITION ---
     if (this.engine.player.isAlive() && this.engine.enemy.isAlive()) {
-      // Le combat est en cours
+      // Le combat est en cours : on affiche les actions de combat standard
       actionsContainer.style.display = 'grid';
       bonusContainer.style.display = 'none';
       nextCombatBtn.style.display = 'none';
     } else {
-      // Le combat est terminé
+      // LE COMBAT EST TERMINÉ
       actionsContainer.style.display = 'none';
       
       if (this.engine.isChoosingBonus) {
@@ -308,25 +315,36 @@ export class UIManager {
           skillBtn.style.display = 'none';
         }
       } else {
-        // Option B : Le combat est gagné (ou perdu) et on attend la transition
+        // Option B : Écran intermédiaire de fin de combat (Victoire ou Défaite)
         bonusContainer.style.display = 'none';
         nextCombatBtn.style.display = 'block';
         
-        // Si nous sommes dans un combat lié à l'histoire (Story Mode imminent au clic)
-        if (this.storyManager && this.engine.player.isAlive()) {
+        if (this.engine.player.isAlive()) {
+          // Cas de Victoire : On affiche un écran de transition propre
           nextCombatBtn.textContent = "➡️ Continuer l'aventure";
-          nextCombatBtn.style.background = "#2196F3"; // Bleu aventure au lieu de vert combat
+          nextCombatBtn.style.background = "#2196F3"; // Bleu d'aventure
+          
+          // On modifie temporairement le titre ou le journal pour marquer la transition
+          const journal = document.getElementById('journal');
+          if (journal && !journal.innerHTML.includes("🎉 VICTOIRE")) {
+            this.addLog(`🎉 **VICTOIRE !** Vous avez vaincu ${this.engine.enemy.name}.`);
+            this.addLog(`⭐ Niveau actuel : **Niv. ${this.engine.player.level}** (${this.engine.player.xp}/${xpNeeded} XP)`);
+          }
+
           nextCombatBtn.onclick = () => {
-            // On déclenche la transition vers le scénario suivant ici !
+            // C'est seulement au clic sur "Continuer" qu'on passe à l'histoire suivante
             const nextScenario = this.storyManager.getCurrentScenario();
             this.showScenario(nextScenario);
             this.updateUI();
           };
         } else {
-          // Mode combat classique infini si l'histoire est finie ou indisponible
-          nextCombatBtn.textContent = "⚔️ Commencer un Nouveau Combat";
-          nextCombatBtn.style.background = "#4CAF50";
-          nextCombatBtn.onclick = () => this.engine.startNewCombat();
+          // Cas de Défaite
+          nextCombatBtn.textContent = "💀 Recommencer (Retour au dernier point)";
+          nextCombatBtn.style.background = "#F44336"; // Rouge défaite
+          nextCombatBtn.onclick = () => {
+            // Logique de défaite / reset de combat
+            this.engine.startNewCombat();
+          };
         }
       }
     }
@@ -444,6 +462,9 @@ export class UIManager {
   }
 
   addLog(message: string) {
+    // 💾 On pousse le log dans notre tableau historique
+    this.logHistory.push(message);
+
     const journal = document.getElementById('journal');
     if (!journal) return;
     journal.innerHTML += `<br>${message}`;
@@ -458,42 +479,18 @@ export class UIManager {
     if (!workspace) return;
     
     const isDeathScenario = scenario.id.includes('death') || scenario.title.includes('💀');
-    const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
+    //const hasPotion = this.engine.player.inventory.items.some(item => item.type === 'potion');
     
     workspace.innerHTML = `
       <div id="scenario-panel" style="${isDeathScenario ? 'background: #FFEBEE; border: 2px solid #D32F2F;' : 'background: #E3F2FD; border: 2px solid #2196F3;'} padding: 15px; border-radius: 8px; margin-bottom: 15px;">
         <h3 style="margin: 0 0 10px 0; color: ${isDeathScenario ? '#D32F2F' : '#1565C0'};">📖 ${scenario.title}</h3>
         <p style="margin: 0 0 15px 0; color: #424242; line-height: 1.5; font-size: 14px;">${scenario.description}</p>
         
-        ${!isDeathScenario ? '<div id="potion-button-container" style="margin-bottom: 15px;"></div>' : ''}
-        
         <div id="scenario-choices" style="display: flex; flex-direction: column; gap: 8px;"></div>
       </div>
     `;
 
-    if (!isDeathScenario) {
-      const potionContainer = document.getElementById('potion-button-container')!;
-      const potionBtn = document.createElement('button');
-      potionBtn.textContent = '🧪 Utiliser une Potion';
-      
-      if (!hasPotion) {
-        potionBtn.style.cssText = 'width: 100%; padding: 10px; background: #BDBDBD; color: #757575; border: none; border-radius: 4px; font-weight: bold; cursor: not-allowed; opacity: 0.6;';
-      } else {
-        potionBtn.style.cssText = 'width: 100%; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;';
-        potionBtn.onmouseover = () => potionBtn.style.background = '#388E3C';
-        potionBtn.onmouseout = () => potionBtn.style.background = '#4CAF50';
-        potionBtn.onclick = () => {
-          if (this.storyManager.usePotion()) {
-            this.addLog('🧪 Vous utilisez une potion et récupérez des PV !');
-            this.updateUI();
-            this.showScenario(scenario);
-          }
-        };
-      }
-      potionContainer.appendChild(potionBtn);
-    }
-
-    const choicesContainer = document.getElementById('scenario-choices')!;
+const choicesContainer = document.getElementById('scenario-choices')!;
     scenario.choices.forEach(choice => {
       const choiceBtn = document.createElement('button');
       choiceBtn.textContent = choice.text;
@@ -514,7 +511,20 @@ export class UIManager {
       }
       
       if (canMakeChoice) {
-        choiceBtn.onclick = () => this.storyManager.makeChoice(choice.id);
+        // --- MODIFICATION ICI ---
+        choiceBtn.onclick = () => {
+          // 1. On applique le choix (ce qui distribue le loot dans StoryManager)
+          this.storyManager.makeChoice(choice.id);
+          
+          // 2. On récupère le nouveau scénario généré
+          const nextScenario = this.storyManager.getCurrentScenario();
+          
+          // 3. On l'affiche à l'écran
+          this.showScenario(nextScenario);
+          
+          // 4. On rafraîchit toute l'interface (ce qui met à jour le sac à dos visuellement)
+          this.updateUI();
+        };
       }
       choicesContainer.appendChild(choiceBtn);
     });
@@ -524,9 +534,7 @@ export class UIManager {
 
   hideScenario() {
     this.isStoryMode = false;
-    const workspace = document.getElementById('game-workspace');
-    if (workspace) {
-      workspace.innerHTML = '';
-    }
+    // ⚡ On force un rafraîchissement immédiat de l'UI pour ré-injecter la scène de combat
+    this.updateUI();
   }
 }

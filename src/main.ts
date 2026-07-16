@@ -86,7 +86,10 @@ const enemy = new Monster('Brute Ennemie', 120, 8, 1, 10, enemyMoves);
 // 3. Initialisation des gestionnaires
 const ui = new UIManager();
 
-const storyManager = new StoryManager(
+let storyManager: StoryManager;
+let engine: CombatEngine;
+
+storyManager = new StoryManager(
   hero,
   (scenario) => ui.showScenario(scenario),
   (msg) => ui.addLog(msg),
@@ -98,7 +101,7 @@ const storyManager = new StoryManager(
   }
 );
 
-const engine = new CombatEngine(
+engine = new CombatEngine(
   hero,
   enemy,
   (msg) => ui.addLog(msg),    // Lien pour ajouter les messages

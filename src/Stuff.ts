@@ -68,8 +68,29 @@ export const ITEM_DATABASE: { weapons: Weapon[]; armors: Armor[]; potions: Potio
   ]
 };
 
-export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
-  // 1. On détermine d'abord la rareté cible (Probabilités)
+export function getEquipmentLoot(enemyLevel: number, targetId?: string): Equipment | null {
+  // 🎯 CAS 1 : On demande un objet ciblé/fixe spécifique (ex: récompense de scénario)
+  if (targetId) {
+    let selectedTemplate = null;
+
+    // On cherche l'id dans les 3 catégories
+    selectedTemplate = ITEM_DATABASE.weapons.find(w => w.id === targetId) ||
+                       ITEM_DATABASE.armors.find(a => a.id === targetId) ||
+                       ITEM_DATABASE.potions.find(p => p.id === targetId);
+
+    if (!selectedTemplate) {
+      console.warn(`L'item "${targetId}" est introuvable dans ITEM_DATABASE.`);
+      return null;
+    }
+
+    // On retourne l'objet ciblé avec son identifiant unique pour le sac à dos
+    return {
+      ...selectedTemplate,
+      id: Math.random().toString(36).substring(2, 11)
+    };
+  }
+
+  // 🎲 CAS 2 : Comportement aléatoire d'origine (inchangé)
   const randRarity = Math.random() * 100;
   let targetRarity: 'common' | 'rare' | 'epic' | 'legendary' = 'common';
 
@@ -78,7 +99,6 @@ export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
   else if (randRarity < 97) targetRarity = 'epic';
   else targetRarity = 'legendary';
 
-  // 2. On choisit le type d'objet : 40% Arme, 40% Armure, 20% Potion
   const randType = Math.random() * 100;
   let itemType: 'weapons' | 'armors' | 'potions';
   
@@ -86,24 +106,20 @@ export function getRandomEquipmentLoot(enemyLevel: number): Equipment | null {
   else if (randType < 80) itemType = 'armors';
   else itemType = 'potions';
 
-  // 3. On filtre la base de données selon le type, le niveau et la rareté
   let validItems = ITEM_DATABASE[itemType].filter(
     (item: any) => item.levelRequired <= enemyLevel && item.rarity === targetRarity
   );
 
-  // 🛡️ Sécurité 1 : Si la rareté précise n'existe pas pour ce niveau, on prend tout ce qui matche le niveau dans cette catégorie
   if (validItems.length === 0) {
     validItems = ITEM_DATABASE[itemType].filter((item: any) => item.levelRequired <= enemyLevel);
   }
 
-  // 🛡️ Sécurité 2 : Si la catégorie entière est vide, on se rabat sur les armes par défaut
   if (validItems.length === 0) {
     validItems = ITEM_DATABASE.weapons.filter(w => w.levelRequired <= enemyLevel);
   }
 
   if (validItems.length === 0) return null;
 
-  // 4. On pioche un objet au hasard et on lui donne un ID unique pour le sac
   const randomIndex = Math.floor(Math.random() * validItems.length);
   const selectedTemplate = validItems[randomIndex];
 
