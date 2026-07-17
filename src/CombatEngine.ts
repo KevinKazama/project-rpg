@@ -76,7 +76,7 @@ export class CombatEngine {
 
   isChoosingBonus: boolean = false;
 
-private checkBattleStatus() {
+  private checkBattleStatus() {
     if (!this.player.isAlive()) {
       this.onLogCallback(`❌ **K.O.** ! ${this.player.name} a perdu le combat...`);
       
@@ -86,14 +86,14 @@ private checkBattleStatus() {
     } else if (!this.enemy.isAlive()) {
       this.onLogCallback(`🏆 **VICTOIRE** ! ${this.enemy.name} a mordu la poussière !`);
      
-      // 🎯 ON NE GÉNÈRE LE LOOT ALÉATOIRE QUE SI LE COMBAT N'EST PAS LIÉ À UN SCÉNARIO PRÉVU
-      // Pour savoir si on est dans l'histoire, on vérifie si le scénario actuel attend un combat
-      const isStoryCombat = this.storyManager && this.storyManager.getCurrentScenario()?.id.includes('combat');
+      // 🌟 [CORRECTION] Pour savoir si on est dans l'histoire, on vérifie s'il y a un scénario en attente (pendingScenarioId)
+      // ou si le choix en cours menait à un combat. 
+      const isStoryCombat = this.storyManager && this.storyManager.isStoryCombatActive();
 
       if (!isStoryCombat) {
-        // --- LOOT DE COMBAT ALÉATOIRE CLASSIQUE ---
+        // --- LOOT DE COMBAT ALÉATOIRE CLASSIQUE --- (Uniquement hors-histoire)
         if (Math.random() < 0.30) {
-          const newPotion = getEquipmentLoot(this.enemy.level, 'p_health_small'); // ou votre ancienne logique
+          const newPotion = getEquipmentLoot(this.enemy.level, 'p_health_small');
           if (newPotion && newPotion.type === 'potion') {
             this.player.addItemToInventory(newPotion);
             this.onLogCallback(`🧪 Trouvé ! ${this.enemy.name} a laissé tomber une **Potion** !`);
@@ -102,19 +102,16 @@ private checkBattleStatus() {
         }
 
         if (Math.random() < 0.95) {
-          const newLoot = getEquipmentLoot(this.enemy.level); // Génération aléatoire sans ID ciblé
+          const newLoot = getEquipmentLoot(this.enemy.level);
 
           if (newLoot) {
             const addedSuccessfully = this.player.addItemToInventory(newLoot);
-            
             if (addedSuccessfully) {
               const rarityStars = newLoot.rarity === 'legendary' ? '✨✨' : '';
               const typeLabel = newLoot.type === 'weapon' ? 'ARME' : 'ARMURE';
-              
               this.onLogCallback(`\n🎒 **BUTIN AJOUTÉ AU SAC (${newLoot.rarity.toUpperCase()})** ${rarityStars}`);
               this.onLogCallback(` Vous avez trouvé une ${typeLabel} : **${newLoot.name}** !`);
               this.onLogCallback(` *"${newLoot.description}"* \n`);
-              
               localStorage.setItem('rpg_player_bag', JSON.stringify(this.player.inventory.items));
             } else {
               this.onLogCallback(`\n⚠️ **SAC PLEIN !** Tu as trouvé **${newLoot.name}** mais ton sac à dos est plein.`);
@@ -124,6 +121,7 @@ private checkBattleStatus() {
       }
 
       // --- EXPÉRIENCE ET STATS (Toujours actif) ---
+      // Note : Si ton StoryManager donne déjà l'XP dans onCombatVictory, tu peux réduire ou supprimer cette partie pour les combats d'histoire
       const xpGained = this.enemy.level * 50;
       const xpResult = this.player.gainXp(xpGained);
       xpResult.logs.forEach(log => this.onLogCallback(log));
@@ -139,12 +137,14 @@ private checkBattleStatus() {
       localStorage.setItem('rpg_player_base_hp', this.player.baseMaxHp.toString());
       localStorage.setItem('rpg_player_base_atk', this.player.baseAttack.toString());
       
-      // ⚠️ DÉCLENCHEMENT SÉCURISÉ : 
-      // Si c'est un combat hors-scénario (entraînement, combat libre), 
-      // on doit forcer la création d'un nouveau combat directement, sinon le jeu se bloque.
+      // 🌟 [PIÈCE MANQUANTE COMPLÉTÉE] : On prévient enfin le StoryManager !
+      if (isStoryCombat && this.storyManager) {
+        this.storyManager.onCombatVictory();
+      }
+
+      // Déclenchement sécurisé hors-scénario
       if (!isStoryCombat) {
-        // Optionnel : vous pouvez laisser l'UI afficher un bouton "Continuer" pour lancer le prochain combat libre
-        // ou appeler startNewCombat() après un court instant.
+        // Mode combat libre : on peut enchaîner ou laisser l'UI gérer
       }
     }
   }

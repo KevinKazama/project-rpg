@@ -4,7 +4,10 @@ import { getSkillForLevel } from './Skills';
 import { Weapon } from './Stuff';
 import { Scenario, Choice } from './Scenario';
 import { StoryManager } from './StoryManager';
+import { traceAll } from './Logger';
 
+
+// ✅ UIManager - UI principal pour le jeu, gère l'affichage du scénario et le combat
 export class UIManager {
   private engine!: CombatEngine;
   private storyManager!: StoryManager;
@@ -14,6 +17,7 @@ export class UIManager {
   private logHistory: string[] = ["Le combat commence ! Choisissez une action."];
 
   init(engine: CombatEngine, onActionSelected: (move: Move) => void, storyManager: StoryManager) {
+    traceAll(this)
     this.engine = engine;
     this.storyManager = storyManager;
     
@@ -164,9 +168,38 @@ export class UIManager {
     const workspace = document.getElementById('game-workspace');
     if (!workspace) return;
 
+    this.updateBagUI();
+
+    const player = this.engine.player;
+
+    const pWeaponText = document.getElementById('player-weapon')!;
+    if (player.equippedWeapon) {
+      const weapon = player.equippedWeapon;
+      pWeaponText.textContent = `⚔️ ${weapon.name} [${weapon.rarity.toUpperCase()}]`;
+      pWeaponText.title = weapon.description;
+    } else { 
+      pWeaponText.textContent = `✋ À mains nues`; 
+    }
+
+    const pArmorText = document.getElementById('player-armor')!;
+    if (player.equippedArmor) {
+      const armor = player.equippedArmor;
+      pArmorText.textContent = `🛡️ ${armor.name} [${armor.rarity.toUpperCase()}]`;
+      pArmorText.title = armor.description;
+    } else { 
+      pArmorText.textContent = `🛡️ Vêtements de civil`; 
+    }
+
+    const pStatsText = document.getElementById('p-stats') as HTMLElement;
+    const baseAtk = this.engine.player.baseAttack;
+    const baseDef = this.engine.player.baseDefense;
+    const weaponBonus = this.engine.player.equippedWeapon ? this.engine.player.equippedWeapon.bonusAtk : 0;
+    const defenseBonus = this.engine.player.equippedArmor ? this.engine.player.equippedArmor.bonusDef : 0;
+
+    pStatsText.textContent = `ATK: ${baseAtk + weaponBonus} | DEF: ${baseDef + defenseBonus} | PV Max: ${this.engine.player.maxHp}`;
+
     // Si on est en mode histoire, on bloque l'affichage de combat et on s'assure que l'histoire est là
     if (this.isStoryMode) {
-      this.updateBagUI();
       if (this.currentScenario && !document.getElementById('scenario-panel')) {
         this.showScenario(this.currentScenario);
       }
@@ -244,39 +277,18 @@ export class UIManager {
     const eLevel = document.getElementById('e-level') as HTMLElement;
     const pXpBar = document.getElementById('p-xp-bar') as HTMLElement;
     const pXpText = document.getElementById('p-xp-text') as HTMLElement;
-    const pStatsText = document.getElementById('p-stats') as HTMLElement;
+    
     
     const nextCombatBtn = document.getElementById('next-combat-btn') as HTMLElement;
     const actionsContainer = document.getElementById('actions-container') as HTMLElement;
     const bonusContainer = document.getElementById('bonus-container') as HTMLElement;
 
-    const baseAtk = this.engine.player.baseAttack;
-    const baseDef = this.engine.player.baseDefense;
-    const weaponBonus = this.engine.player.equippedWeapon ? this.engine.player.equippedWeapon.bonusAtk : 0;
-    const defenseBonus = this.engine.player.equippedArmor ? this.engine.player.equippedArmor.bonusDef : 0;
+
 
     document.getElementById('p-name')!.textContent = this.engine.player.name;
     document.getElementById('e-name')!.textContent = this.engine.enemy.name;
     pLevel.textContent = `⭐ Niveau ${this.engine.player.level}`;
-    pStatsText.textContent = `ATK: ${baseAtk + weaponBonus} | DEF: ${baseDef + defenseBonus} | PV Max: ${this.engine.player.maxHp}`;
-
-    const pWeaponText = document.getElementById('player-weapon')!;
-    if (this.engine.player.equippedWeapon) {
-      const weapon = this.engine.player.equippedWeapon;
-      pWeaponText.textContent = `⚔️ ${weapon.name} [${weapon.rarity.toUpperCase()}]`;
-      pWeaponText.title = weapon.description;
-    } else { 
-      pWeaponText.textContent = `✋ À mains nues`; 
-    }
-
-    const pArmorText = document.getElementById('player-armor')!;
-    if (this.engine.player.equippedArmor) {
-      const armor = this.engine.player.equippedArmor;
-      pArmorText.textContent = `🛡️ ${armor.name} [${armor.rarity.toUpperCase()}]`;
-      pArmorText.title = armor.description;
-    } else { 
-      pArmorText.textContent = `🛡️ Vêtements de civil`; 
-    }
+    
 
     eLevel.textContent = this.engine.enemy.level.toString();
 
@@ -306,52 +318,63 @@ export class UIManager {
     } else {
       // LE COMBAT EST TERMINÉ
       actionsContainer.style.display = 'none';
-      
-      if (this.engine.isChoosingBonus) {
-        // Option A : Le joueur vient de monter de niveau et doit choisir un bonus
-        bonusContainer.style.display = 'block';
-        nextCombatBtn.style.display = 'none';
-        const availableSkill = getSkillForLevel(this.engine.player.level);
-        const skillBtn = document.getElementById('bonus-skill-btn') as HTMLElement;
-        if (availableSkill) {
-          skillBtn.style.display = 'block';
-          skillBtn.textContent = `📖 Apprendre ${availableSkill.name} (Dégâts: ${availableSkill.damage})`;
-        } else {
-          skillBtn.style.display = 'none';
-        }
-      } else {
-        // Option B : Écran intermédiaire de fin de combat (Victoire ou Défaite)
-        bonusContainer.style.display = 'none';
-        nextCombatBtn.style.display = 'block';
+            
+      if (this.engine.player.isAlive()) {
+        // --- CAS DE VICTOIRE ---
         
-        if (this.engine.player.isAlive()) {
-          // Cas de Victoire : On affiche un écran de transition propre
+        // Log de victoire unique
+        const journal = document.getElementById('journal');
+        if (journal && !journal.innerHTML.includes("🎉 VICTOIRE")) {
+          this.addLog(`🎉 **VICTOIRE !** Vous avez vaincu ${this.engine.enemy.name}.`);
+          this.addLog(`⭐ Niveau actuel : **Niv. ${this.engine.player.level}** (${this.engine.player.xp}/${xpNeeded} XP)`);
+        }
+
+        if (this.engine.isChoosingBonus) {
+          // Étape 1 : Le joueur a un Level Up à gérer en priorité
+          bonusContainer.style.display = 'block';
+          nextCombatBtn.style.display = 'block'; // On le laisse visible comme indicateur
+          nextCombatBtn.style.pointerEvents = 'none'; // Désactive le clic sur le gros bouton
+          nextCombatBtn.textContent = "🆙 Choisissez votre Bonus ci-dessous";
+          nextCombatBtn.style.background = "#FF9800"; // Orange Level Up
+          
+          // Configuration du bouton de Skill si disponible
+          const availableSkill = getSkillForLevel(this.engine.player.level);
+          const skillBtn = document.getElementById('bonus-skill-btn') as HTMLElement;
+          if (skillBtn) {
+            if (availableSkill) {
+              skillBtn.style.display = 'block';
+              skillBtn.textContent = `📖 Apprendre ${availableSkill.name} (Dégâts: ${availableSkill.damage})`;
+            } else {
+              skillBtn.style.display = 'none';
+            }
+          }
+        } else {
+          // Étape 2 : Pas ou plus de bonus à choisir, on peut avancer dans l'histoire
+          bonusContainer.style.display = 'none';
+          nextCombatBtn.style.display = 'block';
+          nextCombatBtn.style.pointerEvents = 'auto'; // Réactive le clic
           nextCombatBtn.textContent = "➡️ Continuer l'aventure";
           nextCombatBtn.style.background = "#2196F3"; // Bleu d'aventure
           
-          // On modifie temporairement le titre ou le journal pour marquer la transition
-          const journal = document.getElementById('journal');
-          if (journal && !journal.innerHTML.includes("🎉 VICTOIRE")) {
-            this.addLog(`🎉 **VICTOIRE !** Vous avez vaincu ${this.engine.enemy.name}.`);
-            this.addLog(`⭐ Niveau actuel : **Niv. ${this.engine.player.level}** (${this.engine.player.xp}/${xpNeeded} XP)`);
-          }
-
           nextCombatBtn.onclick = () => {
-            // C'est seulement au clic sur "Continuer" qu'on passe à l'histoire suivante
+            this.isStoryMode = true;
             const nextScenario = this.storyManager.getCurrentScenario();
             this.showScenario(nextScenario);
             this.updateUI();
           };
-        } else {
-          // Cas de Défaite
-          nextCombatBtn.textContent = "💀 Recommencer (Retour au dernier point)";
-          nextCombatBtn.style.background = "#F44336"; // Rouge défaite
-          nextCombatBtn.onclick = () => {
-            // Logique de défaite / reset de combat
-            this.engine.startNewCombat();
-          };
         }
+      } else {
+        // --- CAS DE DÉFAITE ---
+        bonusContainer.style.display = 'none';
+        nextCombatBtn.style.display = 'block';
+        nextCombatBtn.style.pointerEvents = 'auto';
+        nextCombatBtn.textContent = "💀 Recommencer (Retour au dernier point)";
+        nextCombatBtn.style.background = "#F44336"; // Rouge défaite
+        nextCombatBtn.onclick = () => {
+          this.engine.startNewCombat();
+        };
       }
+
     }
 
     this.updateBagUI();
@@ -514,27 +537,27 @@ export class UIManager {
           choiceBtn.onmouseout = () => choiceBtn.style.background = '#2196F3';
         }
       }
-      
       if (canMakeChoice) {
-        // --- MODIFICATION ICI ---
         choiceBtn.onclick = () => {
-          // 1. On applique le choix (ce qui distribue le loot dans StoryManager)
+          // 1. On applique le choix (ce qui va mettre à jour l'ID du scénario courant ou déclencher le combat)
           this.storyManager.makeChoice(choice.id);
           
-          // 2. On récupère le nouveau scénario généré
+          // 2. On regarde où on en est désormais
           const nextScenario = this.storyManager.getCurrentScenario();
-          if (nextScenario.choices.some(c => c.consequence.type === 'combat')) {
-            this.hideScenario();  // ✅ APPEL CRUCIAL !
-            this.isStoryMode = false;
+          
+          // 3. Est-ce que le choix qu'on vient de faire a déclenché un combat ?
+          if (choice.consequence.type === 'combat') {
+            this.hideScenario(); // On cache l'histoire pour afficher l'arène de combat
           } else {
+            // Sinon, on affiche simplement l'histoire suivante (ex: forest_path)
             this.showScenario(nextScenario);
           }
           
-          
-          // 4. On rafraîchit toute l'interface (ce qui met à jour le sac à dos visuellement)
+          // 4. On rafraîchit l'affichage global
           this.updateUI();
         };
       }
+
       choicesContainer.appendChild(choiceBtn);
     });
     

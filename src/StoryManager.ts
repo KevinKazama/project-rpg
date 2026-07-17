@@ -4,7 +4,7 @@ import { STORY_DATABASE } from './StoryDatabase';
 import { getRandomMonster, getMonsterByType } from './Bestiary';
 import { Monster } from './Monster';
 import { getEquipmentLoot } from './Stuff';
-import { Equipment } from './Stuff';
+import { traceAll } from './Logger';
 
 export class StoryManager {
   private currentScenarioId: string;
@@ -13,6 +13,9 @@ export class StoryManager {
   private onScenarioChange: (scenario: Scenario) => void;
   private onLog: (message: string) => void;
   private onCombatStart: (enemy: Monster) => void;
+  public isStoryCombatActive(): boolean {
+    return this.pendingScenarioId !== null;
+  }
 
   constructor(
     player: Character,
@@ -25,6 +28,8 @@ export class StoryManager {
     this.onLog = onLog;
     this.onCombatStart = onCombatStart;
     this.currentScenarioId = 'intro';
+
+    traceAll(this);
   }
 
   getCurrentScenario(): Scenario {
@@ -43,24 +48,6 @@ export class StoryManager {
     const consequence = choice.consequence;
     if (!consequence) return;
 
-    // 🎒 Gestion simplifiée grâce à la fonction centralisée
-    if (consequence.type === 'reward' && consequence.itemReward) {
-      const player = this.player;
-      
-      // On demande un loot ciblé sur l'ID de la récompense
-      const uniqueItem = getEquipmentLoot(player.level, consequence.itemReward);
-
-      if (uniqueItem) {
-        const added = player.addItemToInventory(uniqueItem);
-
-        if (added) {
-          localStorage.setItem('rpg_player_bag', JSON.stringify(player.inventory.items));
-          this.onLog(`🎁 **Butin obtenu** : Vous avez reçu **${uniqueItem.name}** !`);
-        } else {
-          this.onLog(`⚠️ **Sac plein !** Vous avez trouvé **${uniqueItem.name}** mais votre inventaire est complet.`);
-        }
-      }
-    }
 
     // Vérifier si le choix est disponible (offrande avec objet requis)
     if (choice.consequence.type === 'offer' && !this.canMakeChoice(choice)) {
@@ -170,13 +157,13 @@ export class StoryManager {
   }
 
   private handleReward(consequence: ScenarioConsequence): void {
-    if (consequence.value) {
-      this.player.xp += consequence.value;
-      this.onLog(`✨ **Récompense** : +${consequence.value} XP`);
+    if (consequence.xpReward) {
+      const xpResult = this.player.gainXp(consequence.xpReward);
+      this.onLog(`✨ **Récompense** : +${consequence.xpReward} XP`);
     }
     
     if (consequence.itemReward) {
-      const loot = getEquipmentLoot(this.player.level);
+      const loot = getEquipmentLoot(this.player.level, consequence.itemReward);
       if (loot) {
         this.player.addItemToInventory(loot);
         this.onLog(`🎒 **Objet trouvé** : ${loot.name}`);
@@ -247,6 +234,7 @@ export class StoryManager {
 
   private transitionToNextScenario(nextScenarioId?: string): void {
     if (nextScenarioId) {
+      console.log('[transition StoryManager] Passage au scénario suivant:', nextScenarioId);
       this.currentScenarioId = nextScenarioId;
       const nextScenario = this.getCurrentScenario();
       this.onScenarioChange(nextScenario);
@@ -268,30 +256,35 @@ export class StoryManager {
   onCombatVictory(): void {
     console.log('[StoryManager] onCombatVictory appelé');
     
-    // Utiliser le scénario suivant stocké
+    // 1. Récupérer le scénario du combat (AVANT de changer d'ID)
+    const currentScenario = this.getCurrentScenario();
+    if (currentScenario) {
+      const combatChoice = currentScenario.choices.find(c => c.consequence.type === 'combat');
+      
+      // 2. Donner l'XP proprement si elle existe
+      if (combatChoice && combatChoice.consequence.xpReward) {
+        const xpAmount = combatChoice.consequence.xpReward;
+        
+        // Utilisation de la méthode propre qui gère le level-up automatiquement
+        const xpResult = this.player.gainXp(xpAmount);
+        this.onLog(`✨ **Victoire** : +${xpAmount} XP`);
+        
+        if (xpResult.leveledUp) {
+          this.onLog(`🆙 **LEVEL UP !** Niveau ${this.player.level} !`);
+        }
+      }
+    }
+    
+    // 3. MAINTENANT, on peut changer de scénario en toute sécurité
     if (this.pendingScenarioId) {
       console.log('[StoryManager] Passage au scénario suivant:', this.pendingScenarioId);
       this.currentScenarioId = this.pendingScenarioId;
       this.pendingScenarioId = null;
     }
     
-    const scenario = this.getCurrentScenario();
-    const currentChoice = scenario.choices.find(c => c.consequence.type === 'combat');
-    
-    if (currentChoice && currentChoice.consequence.xpReward) {
-      this.player.xp += currentChoice.consequence.xpReward;
-      this.onLog(`✨ **Victoire** : +${currentChoice.consequence.xpReward} XP`);
-    }
-    
-    // Vérifier level up
-    const xpResult = this.player.gainXp(0); // XP déjà ajouté
-    if (xpResult.leveledUp) {
-      this.onLog(`🆙 **LEVEL UP !** Niveau ${this.player.level} !`);
-    }
-    
-    // Afficher le scénario suivant
-    this.onScenarioChange(this.getCurrentScenario());
-    console.log('[StoryManager] Scénario suivant affiché');
+    // 4. Mettre à jour le jeu avec le nouveau scénario (le village)
+    //const nextScenario = this.getCurrentScenario();
+    //this.onScenarioChange(nextScenario);
   }
 
   onCombatDefeat(): void {
@@ -314,3 +307,4 @@ export class StoryManager {
     return used;
   }
 }
+
